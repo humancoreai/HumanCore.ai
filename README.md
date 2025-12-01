@@ -1,7 +1,6 @@
 <p align="center">
   <img src="assets/logo.png" alt="HumanCore Logo" width="220" />
 </p>
-# HumanCore.ai
 
 **HumanCore.ai** ist ein offenes, modulares KI-Agentensystem mit einem zentralen **Supervisor**, mehreren **Worker-Agenten**, einem vollständigen **Wizard-Setup**, **Dashboard**, **Workflow-System** und **Audit-Logs**.  
 Es wurde entwickelt, um KI-gestützte Automatisierung für *jedermann* verständlich, sicher und flexibel nutzbar zu machen.
