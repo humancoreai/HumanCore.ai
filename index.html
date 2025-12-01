@@ -1,15 +1,251 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>HumanCore UI</title>
-<link rel="stylesheet" href="assets/style.css"></head>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>HumanCore.ai – Supervisor & Agent Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
 <body>
-<div class="sidebar">
-  <img src="assets/logo.png" class="brand-logo"/>
-  <h1>HumanCore</h1>
-</div>
-<div class="content">
-  <h2>Dashboard</h2>
-  <p>UI Placeholder - regenerate full UI on request.</p>
-</div>
-<script src="assets/app.js"></script>
-</body></html>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo-wrap">
+          <img src="assets/logo.png" class="brand-logo" alt="HumanCore.ai Logo" />
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">HumanCore.ai</div>
+          <div class="brand-subtitle">Supervisor Console</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">Dashboard</button>
+        <button class="nav-item" data-view="agents">Agenten</button>
+        <button class="nav-item" data-view="workflows">Workflows</button>
+        <button class="nav-item" data-view="config">Konfiguration</button>
+        <button class="nav-item" data-view="logs">Logs & Audit</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-secondary" id="open-wizard-btn">Wizard starten</button>
+        <div class="config-status">
+          <span class="dot dot-green"></span>
+          <span id="config-status-text">Konfiguration: Standard</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="main-header">
+        <div>
+          <h1 id="view-title">Dashboard</h1>
+          <p id="view-subtitle">Zentrale Übersicht für Supervisor & Agenten.</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" id="btn-quick-add">+ Schnell-Aufgabe</button>
+          <button class="btn btn-primary" id="btn-sync">Sync</button>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="view active">
+        <div class="grid grid-3">
+          <div class="card">
+            <div class="card-header">
+              <h2>Heute</h2>
+              <span class="badge">Übersicht</span>
+            </div>
+            <ul class="list" id="today-list"></ul>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Supervisor-Last</h2>
+            </div>
+            <div class="load-meter">
+              <div class="load-bar">
+                <div class="load-fill" id="supervisor-load-fill" style="width: 20%;"></div>
+              </div>
+              <div class="load-meta">
+                <span id="supervisor-load-label">20 % Auslastung</span>
+                <span class="load-hint" id="autoscale-hint">Auto-Scaling nicht nötig</span>
+              </div>
+            </div>
+            <div class="small-text">
+              Einschätzung basierend auf laufenden Prozessen und konfiguriertem Limit.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Systemstatus</h2>
+            </div>
+            <ul class="pill-list" id="system-status-list"></ul>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h2>Agenten-Status</h2>
+            </div>
+            <div id="agent-status-grid" class="agent-grid"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>Aktivität</h2>
+            </div>
+            <ul class="activity-log" id="activity-log"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- AGENTEN -->
+      <section id="view-agents" class="view">
+        <div class="card">
+          <div class="card-header">
+            <h2>Agentenliste</h2>
+            <span class="badge badge-soft">8 Worker + 1 Supervisor</span>
+          </div>
+          <div id="agent-list" class="agent-list"></div>
+        </div>
+      </section>
+
+      <!-- WORKFLOWS -->
+      <section id="view-workflows" class="view">
+        <div class="card">
+          <div class="card-header">
+            <h2>Workflows</h2>
+            <button class="btn btn-secondary btn-sm" id="btn-add-workflow">+ Workflow</button>
+          </div>
+          <div id="workflow-list" class="workflow-list"></div>
+        </div>
+      </section>
+
+      <!-- KONFIG -->
+      <section id="view-config" class="view">
+        <div class="card">
+          <div class="card-header">
+            <h2>Konfigurationsübersicht</h2>
+            <button class="btn btn-secondary btn-sm" id="btn-open-wizard-secondary">Wizard öffnen</button>
+          </div>
+          <pre class="config-preview" id="config-preview"></pre>
+        </div>
+      </section>
+
+      <!-- LOGS -->
+      <section id="view-logs" class="view">
+        <div class="card">
+          <div class="card-header">
+            <h2>Audit-Log (Demo)</h2>
+          </div>
+          <ul class="activity-log" id="audit-log"></ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- WIZARD OVERLAY -->
+  <div id="wizard-overlay" class="wizard-overlay hidden">
+    <div class="wizard-panel">
+      <header class="wizard-header">
+        <h2>HumanCore Setup-Wizard</h2>
+        <button class="wizard-close" id="wizard-close-btn">&times;</button>
+      </header>
+      <div class="wizard-steps">
+        <div class="wizard-step active" data-step="1">
+          <h3>1. Basisprofil</h3>
+          <label>
+            Anzeigename des Systems
+            <input type="text" id="cfg-display-name" placeholder="z.B. HumanCore Supervisor" />
+          </label>
+          <label>
+            Standardmodus
+            <select id="cfg-mode">
+              <option value="experte">Expertenmodus (Standard)</option>
+              <option value="kurz">Kurz & knapp</option>
+              <option value="erklärend">Erklärmodus</option>
+            </select>
+          </label>
+        </div>
+        <div class="wizard-step" data-step="2">
+          <h3>2. Autonomie & Sicherheit</h3>
+          <label>
+            Autonomie-Level
+            <select id="cfg-autonomy">
+              <option value="0">Level 0 – nur Vorschläge</option>
+              <option value="1">Level 1 – Entwürfe, nie endgültig</option>
+              <option value="2">Level 2 – intern autonom, extern mit Freigabe</option>
+            </select>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="cfg-confirm-critical" checked />
+            Immer nachfragen bei Finanzen, Verträgen & Behörden
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="cfg-explain-warnings" checked />
+            Warnungen kurz begründen (Explain-Mode)
+          </label>
+        </div>
+        <div class="wizard-step" data-step="3">
+          <h3>3. Agenten & Lastverteilung</h3>
+          <label>
+            Maximale parallele Prozesse für Supervisor
+            <input type="number" id="cfg-max-processes" min="1" max="50" value="6" />
+          </label>
+          <label>
+            Auto-Scaling Empfehlung
+            <select id="cfg-autoscale">
+              <option value="off">Aus</option>
+              <option value="soft">Soft – nur Hinweise</option>
+              <option value="hard">Aktiv – klare Empfehlungen</option>
+            </select>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="cfg-enable-groups" checked />
+            Agenten nach Typ gruppieren (z.B. Writer-1, Writer-2)
+          </label>
+        </div>
+        <div class="wizard-step" data-step="4">
+          <h3>4. Speicher & Datenschutz</h3>
+          <label>
+            Aufbewahrungsdauer von Logs
+            <select id="cfg-log-retention">
+              <option value="6m">6 Monate + Halbjahresbericht</option>
+              <option value="12m">12 Monate + Jahresbericht</option>
+              <option value="custom">Benutzerdefiniert</option>
+            </select>
+          </label>
+          <label>
+            Aufbewahrungsdauer von Konfig-Snapshots
+            <select id="cfg-config-retention">
+              <option value="12m">12 Monate</option>
+              <option value="24m">24 Monate</option>
+              <option value="keep">Unbegrenzt (manuelle Löschung)</option>
+            </select>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="cfg-anon-logs" checked />
+            Personenbezogene Daten in Logs automatisch anonymisieren
+          </label>
+        </div>
+        <div class="wizard-step" data-step="5">
+          <h3>5. Zusammenfassung</h3>
+          <p>Überblick über die aktuelle Konfiguration:</p>
+          <pre class="config-preview small" id="wizard-summary"></pre>
+          <p class="small-text">
+            Mit „Speichern & aktivieren“ wird die Konfiguration lokal (im Browser) gesichert.
+            Es werden keine Daten an Server übertragen.
+          </p>
+        </div>
+      </div>
+      <footer class="wizard-footer">
+        <button class="btn btn-secondary" id="wizard-back-btn">Zurück</button>
+        <button class="btn btn-primary" id="wizard-next-btn">Weiter</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
