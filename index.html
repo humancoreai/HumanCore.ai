@@ -247,5 +247,46 @@
   </div>
 
   <script src="assets/app.js"></script>
+  <!-- Supervisor Floating Button -->
+    <button id="sv-toggle-btn" class="sv-toggle-btn" aria-label="Supervisor öffnen">
+      SV
+    </button>
+
+    <!-- Supervisor Chat Panel -->
+    <div id="sv-chat-panel" class="sv-chat-panel hidden">
+      <div class="sv-chat-header">
+        <span>Supervisor</span>
+        <div class="sv-chat-header-right">
+          <button id="sv-mute-btn" class="sv-icon-btn" title="Ton an/aus">🔔</button>
+          <button id="sv-close-btn" class="sv-icon-btn" title="Schließen">✕</button>
+        </div>
+      </div>
+      <div id="sv-chat-body" class="sv-chat-body">
+        <!-- Nachrichten werden per JS eingefügt -->
+      </div>
+      <div class="sv-chat-footer">
+        <input
+          id="sv-input"
+          type="text"
+          placeholder="Auftrag oder Frage an den Supervisor eingeben..."
+        />
+        <label for="sv-file-input" class="sv-icon-btn sv-file-btn" title="Datei anhängen">
+          📎
+        </label>
+        <input id="sv-file-input" type="file" class="hidden" />
+        <button id="sv-send-btn" class="sv-send-btn">Senden</button>
+      </div>
+      <div id="sv-attachment-info" class="sv-attachment-info hidden"></div>
+    </div>
+
+    <!-- Supervisor Popup (Alarm / Nachfrage / Erfolg) -->
+    <div id="sv-popup" class="sv-popup hidden">
+      <div id="sv-popup-content" class="sv-popup-content">
+        <div id="sv-popup-text"></div>
+        <button id="sv-popup-close" class="sv-popup-close-btn">OK</button>
+      </div>
+    </div>
+  </body>
+</html>
 </body>
 </html>
