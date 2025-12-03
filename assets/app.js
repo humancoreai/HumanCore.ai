@@ -426,3 +426,304 @@ function fillLogs() {
     list.appendChild(li);
   });
 }
+// ===========================
+// Supervisor Chat & Logic
+// ===========================
+
+let svMessages = [];
+let svLogs = window.hcLogs || []; // falls schon vorhanden
+let svWorkflows = window.hcWorkflows || [];
+let svMuted = false;
+let svAttachedFile = null;
+
+// DOM-Refs warten, bis DOM geladen ist
+document.addEventListener("DOMContentLoaded", () => {
+  const svToggleBtn = document.getElementById("sv-toggle-btn");
+  const svPanel = document.getElementById("sv-chat-panel");
+  const svCloseBtn = document.getElementById("sv-close-btn");
+  const svMuteBtn = document.getElementById("sv-mute-btn");
+  const svBody = document.getElementById("sv-chat-body");
+  const svInput = document.getElementById("sv-input");
+  const svSendBtn = document.getElementById("sv-send-btn");
+  const svFileInput = document.getElementById("sv-file-input");
+  const svAttachmentInfo = document.getElementById("sv-attachment-info");
+
+  const svPopup = document.getElementById("sv-popup");
+  const svPopupContent = document.getElementById("sv-popup-content");
+  const svPopupText = document.getElementById("sv-popup-text");
+  const svPopupClose = document.getElementById("sv-popup-close");
+
+  // Helper: Chat Panel toggeln
+  function toggleSvPanel(forceOpen) {
+    if (!svPanel) return;
+    const isHidden = svPanel.classList.contains("hidden");
+    const shouldOpen = forceOpen ? true : isHidden;
+    if (shouldOpen) {
+      svPanel.classList.remove("hidden");
+      svToggleBtn?.classList.add("sv-open");
+    } else {
+      svPanel.classList.add("hidden");
+      svToggleBtn?.classList.remove("sv-open");
+    }
+  }
+
+  // Helper: Sound (nur für Alarm)
+  function playAlarm() {
+    if (svMuted) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } catch (e) {
+      // Audio optional – bei Fehler einfach ignorieren
+    }
+  }
+
+  // Helper: Chat rendern
+  function renderSvMessages() {
+    if (!svBody) return;
+    svBody.innerHTML = "";
+    svMessages.forEach((msg) => {
+      const div = document.createElement("div");
+      div.classList.add("sv-msg");
+      if (msg.from === "user") {
+        div.classList.add("sv-msg-user");
+      } else {
+        div.classList.add("sv-msg-sv");
+        if (msg.severity === "success") {
+          div.classList.add("sv-msg-sv-success");
+        } else if (msg.severity === "ask") {
+          div.classList.add("sv-msg-sv-ask");
+        } else if (msg.severity === "alarm") {
+          div.classList.add("sv-msg-sv-alarm");
+        }
+      }
+      div.textContent = msg.text;
+      svBody.appendChild(div);
+    });
+    svBody.scrollTop = svBody.scrollHeight;
+  }
+
+  // Helper: Logs (optional mit vorhandenen UI verknüpfen)
+  function addSvLog(source, type, message, context = {}) {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      source,
+      type,
+      message,
+      context,
+    };
+    svLogs.push(entry);
+    window.hcLogs = svLogs;
+    // Wenn du schon eine Funktion hast, die Logs rendert, hier aufrufen:
+    if (typeof window.renderLogs === "function") {
+      window.renderLogs(svLogs);
+    }
+  }
+
+  // Helper: Workflow hinzufügen (Demo)
+  function addSvWorkflow(name, type, zone, origin, extra = {}) {
+    const wf = {
+      id: "wf-" + Date.now() + "-" + Math.floor(Math.random() * 9999),
+      name,
+      type,
+      zone,
+      status: "planned",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      origin,
+      ...extra,
+    };
+    svWorkflows.push(wf);
+    window.hcWorkflows = svWorkflows;
+    if (typeof window.renderWorkflows === "function") {
+      window.renderWorkflows(svWorkflows);
+    }
+    return wf;
+  }
+
+  // Popup anzeigen
+  function svShowPopup(severity, text) {
+    if (!svPopup || !svPopupContent || !svPopupText) return;
+    svPopupText.textContent = text;
+    svPopupContent.classList.remove(
+      "sv-popup-success",
+      "sv-popup-ask",
+      "sv-popup-alarm"
+    );
+    if (severity === "success") {
+      svPopupContent.classList.add("sv-popup-success");
+    } else if (severity === "ask") {
+      svPopupContent.classList.add("sv-popup-ask");
+    } else if (severity === "alarm") {
+      svPopupContent.classList.add("sv-popup-alarm");
+    }
+    svPopup.classList.remove("hidden");
+
+    if (severity === "success") {
+      // Auto-Close nach 3 Sekunden
+      setTimeout(() => {
+        svPopup.classList.add("hidden");
+      }, 3000);
+    }
+
+    if (severity === "alarm") {
+      playAlarm();
+      toggleSvPanel(true); // Chat automatisch öffnen
+    }
+  }
+
+  // Supervisor-Nachricht erzeugen (Chat + Popup optional + Logs)
+  function svNotify(severity, text, options = {}) {
+    const { popup = false, source = "Supervisor", logType = "info" } = options;
+
+    svMessages.push({
+      from: "sv",
+      text,
+      severity,
+      timestamp: new Date().toISOString(),
+    });
+    renderSvMessages();
+
+    addSvLog(source, logType, text);
+
+    if (popup) {
+      svShowPopup(severity, text);
+    }
+  }
+
+  // User-Eingabe an SV
+  function handleSvUserInput() {
+    const raw = svInput.value.trim();
+    if (!raw && !svAttachedFile) return;
+
+    if (raw) {
+      svMessages.push({
+        from: "user",
+        text: raw,
+        severity: "normal",
+        timestamp: new Date().toISOString(),
+      });
+    }
+    renderSvMessages();
+
+    const cmd = raw.toLowerCase();
+
+    // simple Command-Parsing
+    if (svAttachedFile) {
+      const file = svAttachedFile;
+      svAttachedFile = null;
+      svAttachmentInfo.classList.add("hidden");
+      svAttachmentInfo.textContent = "";
+
+      // Datei-Workflow anlegen (immer mind. gelb)
+      const wfName = `Dokument: ${file.name}`;
+      addSvWorkflow(wfName, "document", "yellow", "sv-chat", {
+        fileName: file.name,
+      });
+
+      svNotify(
+        "success",
+        `Dokument „${file.name}“ übernommen. Entwurfs-Workflow „${wfName}“ wurde angelegt (Zone: gelb).`,
+        { popup: true, logType: "decision" }
+      );
+    } else if (cmd.includes("workflow") || cmd.includes("bericht")) {
+      const nameMatch = raw.match(/["“](.+?)["”]/);
+      const wfName = nameMatch ? nameMatch[1] : "Allgemeiner Workflow";
+      addSvWorkflow(wfName, "generic", "yellow", "sv-chat");
+      svNotify(
+        "success",
+        `Workflow „${wfName}“ als Entwurf angelegt (Zone: gelb). Bitte prüfen, bevor etwas extern verwendet wird.`,
+        { popup: true, logType: "decision" }
+      );
+    } else if (cmd.includes("behörde") || cmd.includes("finanz")) {
+      svNotify(
+        "alarm",
+        "Kritische Aktion erkannt (Behörde/Finanzen). HumanCore 1.0 arbeitet nur im Entwurfsmodus – keine direkte Außenkommunikation.",
+        { popup: true, logType: "warning" }
+      );
+    } else if (cmd.includes("auslastung") || cmd.includes("last")) {
+      const load = 35 + Math.floor(Math.random() * 25); // Demo
+      svNotify(
+        "success",
+        `Aktuelle geschätzte Supervisor-Auslastung: ${load} %. Alle Worker innerhalb des sicheren Bereichs.`,
+        { popup: false, logType: "info" }
+      );
+    } else if (cmd.includes("hilfe") || cmd.includes("help")) {
+      svNotify(
+        "ask",
+        "Du kannst z.B. sagen: „Starte Workflow „Kundenbericht““, „Wie ist die aktuelle Auslastung?“, oder eine Datei anhängen, die als Entwurf-Workflow übernommen wird.",
+        { popup: false, logType: "info" }
+      );
+    } else if (cmd.includes("reset") || cmd.includes("zurücksetzen")) {
+      svMessages = [];
+      renderSvMessages();
+      svNotify(
+        "success",
+        "Supervisor-Chatverlauf lokal zurückgesetzt (Demo-Modus, keine echten Daten).",
+        { popup: false, logType: "info" }
+      );
+    } else if (cmd) {
+      svNotify(
+        "ask",
+        "Unklarer Auftrag. Bitte konkreter formulieren oder das Wort „Workflow“, „Bericht“, „Auslastung“ oder „Behörde/Finanzen“ verwenden.",
+        { popup: false, logType: "warning" }
+      );
+    }
+
+    svInput.value = "";
+  }
+
+  // Datei-Auswahl
+  if (svFileInput) {
+    svFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      svAttachedFile = file;
+      svAttachmentInfo.textContent = `Angehängte Datei: ${file.name} (Demo – es wird kein echter Upload durchgeführt)`;
+      svAttachmentInfo.classList.remove("hidden");
+
+      svNotify(
+        "success",
+        `Datei „${file.name}“ beim Supervisor vorgemerkt. Sende jetzt einen Auftrag, z.B. „Entwurf für diesen Antrag vorbereiten“.`,
+        { popup: false, logType: "info" }
+      );
+    });
+  }
+
+  // Events
+
+  svToggleBtn?.addEventListener("click", () => toggleSvPanel());
+  svCloseBtn?.addEventListener("click", () => toggleSvPanel(false));
+
+  svMuteBtn?.addEventListener("click", () => {
+    svMuted = !svMuted;
+    svMuteBtn.textContent = svMuted ? "🔕" : "🔔";
+  });
+
+  svSendBtn?.addEventListener("click", handleSvUserInput);
+  svInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSvUserInput();
+    }
+  });
+
+  svPopupClose?.addEventListener("click", () => {
+    svPopup.classList.add("hidden");
+  });
+
+  // Initiale Begrüßung
+  svNotify(
+    "success",
+    "Supervisor bereit. Du kannst Workflows starten, Dokumente als Entwurf übernehmen und die aktuelle Auslastung abfragen. HumanCore 1.0 arbeitet im sicheren Demo-Modus – keine echte Außenkommunikation.",
+    { popup: false, logType: "info" }
+  );
+});
