@@ -1,74 +1,81 @@
 // ===========================
-// HumanCore.ai – app.js
-// Basis-Logik für Navigation,
-// Wizard, Workflows, Logs & Supervisor
+// HumanCore.ai – app.js (ES5-kompatibel)
 // ===========================
 
-// Globale Zustände
-let hcConfig = null;
-let hcWorkflows = [];
-let hcLogs = [];
+var hcConfig = null;
+var hcWorkflows = [];
+var hcLogs = [];
 
-// Für andere Scripts zugänglich machen (falls nötig)
 window.hcConfig = hcConfig;
 window.hcWorkflows = hcWorkflows;
 window.hcLogs = hcLogs;
 
 function initHumanCore() {
   // ---------- Navigation ----------
-  const navButtons = document.querySelectorAll(".nav-btn");
-  const sections = document.querySelectorAll(".page-section");
+  var navButtons = document.querySelectorAll(".nav-btn");
+  var sections = document.querySelectorAll(".page-section");
 
   function showSection(id) {
-    sections.forEach((sec) => {
+    for (var i = 0; i < sections.length; i++) {
+      var sec = sections[i];
       if (sec.id === id) {
         sec.classList.add("active");
       } else {
         sec.classList.remove("active");
       }
-    });
+    }
   }
 
-  navButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const target = btn.getAttribute("data-target");
-      if (target) {
-        showSection(target);
-      }
-    });
-  });
+  for (var i = 0; i < navButtons.length; i++) {
+    navButtons[i].addEventListener("click", (function () {
+      var target = navButtons[i].getAttribute("data-target");
+      return function () {
+        if (target) showSection(target);
+      };
+    })());
+  }
 
   // ---------- Dashboard ----------
-  const wfCounterEl = document.getElementById("wf-counter");
+  var wfCounterEl = document.getElementById("wf-counter");
 
   function updateWorkflowCounter() {
     if (!wfCounterEl) return;
     if (!hcWorkflows.length) {
       wfCounterEl.textContent = "Keine Workflows gestartet";
     } else {
-      const count = hcWorkflows.length;
-      wfCounterEl.textContent = `${count} Workflow${count === 1 ? "" : "s"} aktiv/geplant (Demo)`;
+      var count = hcWorkflows.length;
+      wfCounterEl.textContent =
+        count + " Workflow" + (count === 1 ? "" : "s") + " aktiv/geplant (Demo)";
     }
   }
 
   // ---------- Wizard ----------
-  const wizName = document.getElementById("wiz-name");
-  const wizAutonomy = document.getElementById("wiz-autonomy");
-  const wizCritical = document.getElementById("wiz-critical");
-  const wizGenerate = document.getElementById("wiz-generate");
-  const wizOutput = document.getElementById("wiz-output");
-  const configBox = document.getElementById("config-box");
+  var wizName = document.getElementById("wiz-name");
+  var wizAutonomy = document.getElementById("wiz-autonomy");
+  var wizCritical = document.getElementById("wiz-critical");
+  var wizGenerate = document.getElementById("wiz-generate");
+  var wizOutput = document.getElementById("wiz-output");
+  var configBox = document.getElementById("config-box");
 
   function generateConfig() {
-    const displayName = wizName?.value?.trim() || "HumanCore Supervisor";
-    const autonomy = wizAutonomy ? parseInt(wizAutonomy.value, 10) || 0 : 0;
-    const confirmCritical = wizCritical ? wizCritical.value === "true" : true;
+    var displayName =
+      wizName && wizName.value && wizName.value.trim()
+        ? wizName.value.trim()
+        : "HumanCore Supervisor";
+    var autonomy =
+      wizAutonomy && wizAutonomy.value
+        ? parseInt(wizAutonomy.value, 10) || 0
+        : 0;
+    var confirmCritical =
+      wizCritical && wizCritical.value
+        ? wizCritical.value === "true"
+        : true;
 
     hcConfig = {
-      displayName,
+      displayName: displayName,
       mode: "experte",
-      autonomy,
-      confirmCritical,
+      autonomy: autonomy,
+      confirmCritical: confirmCritical,
       explainWarnings: true,
       maxProcesses: 8,
       autoscale: "soft",
@@ -76,12 +83,12 @@ function initHumanCore() {
       logRetention: "6m",
       configRetention: "12m",
       anonLogs: true,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     window.hcConfig = hcConfig;
 
-    const pretty = JSON.stringify(hcConfig, null, 2);
+    var pretty = JSON.stringify(hcConfig, null, 2);
     if (wizOutput) wizOutput.textContent = pretty;
     if (configBox) configBox.textContent = pretty;
 
@@ -93,15 +100,16 @@ function initHumanCore() {
   }
 
   // ---------- Logs ----------
-  const logList = document.getElementById("log-list");
+  var logList = document.getElementById("log-list");
 
-  function addLog(source, type, message, context = {}) {
-    const entry = {
+  function addLog(source, type, message, context) {
+    if (!context) context = {};
+    var entry = {
       timestamp: new Date().toISOString(),
-      source,
-      type,
-      message,
-      context,
+      source: source,
+      type: type,
+      message: message,
+      context: context
     };
     hcLogs.push(entry);
     window.hcLogs = hcLogs;
@@ -113,44 +121,65 @@ function initHumanCore() {
     logList.innerHTML = "";
 
     if (!logs.length) {
-      const p = document.createElement("p");
+      var p = document.createElement("p");
       p.textContent = "Keine Logs vorhanden.";
       logList.appendChild(p);
       return;
     }
 
-    logs.slice().reverse().forEach((entry) => {
-      const div = document.createElement("div");
+    for (var i = logs.length - 1; i >= 0; i--) {
+      var entry = logs[i];
+      var div = document.createElement("div");
       div.style.borderBottom = "1px solid rgba(148,163,184,0.3)";
       div.style.padding = "4px 0";
-      const time = new Date(entry.timestamp).toLocaleString();
-      div.innerHTML = `<strong>[${time}] ${entry.source}</strong> (${entry.type}): ${entry.message}`;
+      var time = new Date(entry.timestamp).toLocaleString();
+      div.innerHTML =
+        "<strong>[" +
+        time +
+        "] " +
+        entry.source +
+        "</strong> (" +
+        entry.type +
+        "): " +
+        entry.message;
       logList.appendChild(div);
-    });
+    }
   }
 
   window.renderLogs = renderLogs;
 
   // ---------- Workflows ----------
-  const workflowList = document.getElementById("workflow-list");
+  var workflowList = document.getElementById("workflow-list");
 
-  function addWorkflow(name, type, zone, origin, extra = {}) {
-    const wf = {
+  function addWorkflow(name, type, zone, origin, extra) {
+    if (!extra) extra = {};
+    var wf = {
       id: "wf-" + Date.now() + "-" + Math.floor(Math.random() * 9999),
-      name,
-      type,
-      zone,
+      name: name,
+      type: type,
+      zone: zone,
       status: "planned",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      origin,
-      ...extra,
+      origin: origin
     };
+    // extra-Eigenschaften dranhängen
+    for (var k in extra) {
+      if (extra.hasOwnProperty(k)) {
+        wf[k] = extra[k];
+      }
+    }
+
     hcWorkflows.push(wf);
     window.hcWorkflows = hcWorkflows;
     renderWorkflows(hcWorkflows);
     updateWorkflowCounter();
-    addLog("Supervisor", "decision", `Workflow „${name}“ angelegt (Zone: ${zone}).`, { workflow: wf });
+    addLog(
+      "Supervisor",
+      "decision",
+      'Workflow „' + name + "“ angelegt (Zone: " + zone + ").",
+      { workflow: wf }
+    );
     return wf;
   }
 
@@ -159,64 +188,68 @@ function initHumanCore() {
     workflowList.innerHTML = "";
 
     if (!workflows.length) {
-      const p = document.createElement("p");
+      var p = document.createElement("p");
       p.textContent = "Keine Workflows vorhanden.";
       workflowList.appendChild(p);
       return;
     }
 
-    workflows
-      .slice()
-      .reverse()
-      .forEach((wf) => {
-        const row = document.createElement("div");
-        row.style.display = "flex";
-        row.style.justifyContent = "space-between";
-        row.style.alignItems = "center";
-        row.style.padding = "4px 0";
-        row.style.borderBottom = "1px solid rgba(148,163,184,0.3)";
+    for (var i = workflows.length - 1; i >= 0; i--) {
+      var wf = workflows[i];
+      var row = document.createElement("div");
+      row.style.display = "flex";
+      row.style.justifyContent = "space-between";
+      row.style.alignItems = "center";
+      row.style.padding = "4px 0";
+      row.style.borderBottom = "1px solid rgba(148,163,184,0.3)";
 
-        const left = document.createElement("div");
-        left.innerHTML = `<strong>${wf.name}</strong> <span style="color:#64748b;">(${wf.type})</span>`;
+      var left = document.createElement("div");
+      left.innerHTML =
+        "<strong>" +
+        wf.name +
+        "</strong> <span style=\"color:#64748b;\">(" +
+        wf.type +
+        ")</span>";
 
-        const right = document.createElement("div");
-        right.style.fontSize = "11px";
-        right.style.color = "#94a3b8";
-        right.textContent = `Zone: ${wf.zone} • Status: ${wf.status}`;
+      var right = document.createElement("div");
+      right.style.fontSize = "11px";
+      right.style.color = "#94a3b8";
+      right.textContent =
+        "Zone: " + wf.zone + " • Status: " + wf.status;
 
-        row.appendChild(left);
-        row.appendChild(right);
-        workflowList.appendChild(row);
-      });
+      row.appendChild(left);
+      row.appendChild(right);
+      workflowList.appendChild(row);
+    }
   }
 
   window.renderWorkflows = renderWorkflows;
 
   // ---------- Supervisor Chat & Popup ----------
 
-  const svToggleBtn = document.getElementById("sv-toggle-btn");
-  const svPanel = document.getElementById("sv-chat-panel");
-  const svCloseBtn = document.getElementById("sv-close-btn");
-  const svMuteBtn = document.getElementById("sv-mute-btn");
-  const svBody = document.getElementById("sv-chat-body");
-  const svAttachmentInfo = document.getElementById("sv-attachment-info");
-  const svInput = document.getElementById("sv-input");
-  const svSendBtn = document.getElementById("sv-send-btn");
-  const svFileInput = document.getElementById("sv-file-input");
+  var svToggleBtn = document.getElementById("sv-toggle-btn");
+  var svPanel = document.getElementById("sv-chat-panel");
+  var svCloseBtn = document.getElementById("sv-close-btn");
+  var svMuteBtn = document.getElementById("sv-mute-btn");
+  var svBody = document.getElementById("sv-chat-body");
+  var svAttachmentInfo = document.getElementById("sv-attachment-info");
+  var svInput = document.getElementById("sv-input");
+  var svSendBtn = document.getElementById("sv-send-btn");
+  var svFileInput = document.getElementById("sv-file-input");
 
-  const svPopup = document.getElementById("sv-popup");
-  const svPopupContent = document.getElementById("sv-popup-content");
-  const svPopupText = document.getElementById("sv-popup-text");
-  const svPopupClose = document.getElementById("sv-popup-close");
+  var svPopup = document.getElementById("sv-popup");
+  var svPopupContent = document.getElementById("sv-popup-content");
+  var svPopupText = document.getElementById("sv-popup-text");
+  var svPopupClose = document.getElementById("sv-popup-close");
 
-  let svMessages = [];
-  let svMuted = false;
-  let svAttachedFile = null;
+  var svMessages = [];
+  var svMuted = false;
+  var svAttachedFile = null;
 
   function toggleSvPanel(forceOpen) {
     if (!svPanel || !svToggleBtn) return;
-    const isHidden = svPanel.classList.contains("hidden");
-    const shouldOpen = forceOpen ? true : isHidden;
+    var isHidden = svPanel.classList.contains("hidden");
+    var shouldOpen = forceOpen ? true : isHidden;
     if (shouldOpen) {
       svPanel.classList.remove("hidden");
       svToggleBtn.classList.add("sv-open");
@@ -229,9 +262,11 @@ function initHumanCore() {
   function playAlarm() {
     if (svMuted) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
       osc.type = "sine";
       osc.frequency.setValueAtTime(880, ctx.currentTime);
       gain.gain.setValueAtTime(0.1, ctx.currentTime);
@@ -240,15 +275,16 @@ function initHumanCore() {
       osc.start();
       osc.stop(ctx.currentTime + 0.12);
     } catch (e) {
-      // optional
+      // ignorieren
     }
   }
 
   function renderSvMessages() {
     if (!svBody) return;
     svBody.innerHTML = "";
-    svMessages.forEach((msg) => {
-      const div = document.createElement("div");
+    for (var i = 0; i < svMessages.length; i++) {
+      var msg = svMessages[i];
+      var div = document.createElement("div");
       div.classList.add("sv-msg");
       if (msg.from === "user") {
         div.classList.add("sv-msg-user");
@@ -264,12 +300,12 @@ function initHumanCore() {
       }
       div.textContent = msg.text;
       svBody.appendChild(div);
-    });
+    }
     svBody.scrollTop = svBody.scrollHeight;
   }
 
-  function svAddLog(source, type, message, context = {}) {
-    addLog(source, type, message, context);
+  function svAddLog(source, type, message, context) {
+    addLog(source, type, message, context || {});
   }
 
   function svShowPopup(severity, text) {
@@ -286,7 +322,7 @@ function initHumanCore() {
     svPopup.classList.remove("hidden");
 
     if (severity === "success") {
-      setTimeout(() => {
+      setTimeout(function () {
         svPopup.classList.add("hidden");
       }, 3000);
     }
@@ -297,13 +333,17 @@ function initHumanCore() {
     }
   }
 
-  function svNotify(severity, text, options = {}) {
-    const { popup = false, source = "Supervisor", logType = "info" } = options;
+  function svNotify(severity, text, options) {
+    if (!options) options = {};
+    var source = options.source || "Supervisor";
+    var logType = options.logType || "info";
+    var popup = !!options.popup;
+
     svMessages.push({
       from: "sv",
-      text,
-      severity,
-      timestamp: new Date().toISOString(),
+      text: text,
+      severity: severity,
+      timestamp: new Date().toISOString()
     });
     renderSvMessages();
     svAddLog(source, logType, text);
@@ -312,7 +352,7 @@ function initHumanCore() {
 
   function handleSvUserInput() {
     if (!svInput) return;
-    const raw = svInput.value.trim();
+    var raw = svInput.value ? svInput.value.trim() : "";
     if (!raw && !svAttachedFile) return;
 
     if (raw) {
@@ -320,60 +360,68 @@ function initHumanCore() {
         from: "user",
         text: raw,
         severity: "normal",
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString()
       });
       renderSvMessages();
     }
 
-    const cmd = raw.toLowerCase();
+    var cmd = raw.toLowerCase();
 
     if (svAttachedFile) {
-      const file = svAttachedFile;
+      var file = svAttachedFile;
       svAttachedFile = null;
       if (svAttachmentInfo) {
         svAttachmentInfo.classList.add("hidden");
         svAttachmentInfo.textContent = "";
       }
 
-      const wfName = `Dokument: ${file.name}`;
+      var wfName = "Dokument: " + file.name;
       addWorkflow(wfName, "document", "yellow", "sv-chat", {
-        fileName: file.name,
+        fileName: file.name
       });
 
       svNotify(
         "success",
-        `Dokument „${file.name}“ übernommen. Entwurfs-Workflow „${wfName}“ wurde angelegt (Zone: gelb).`,
+        "Dokument „" +
+          file.name +
+          "“ übernommen. Entwurfs-Workflow „" +
+          wfName +
+          "“ wurde angelegt (Zone: gelb).",
         { popup: true, logType: "decision" }
       );
-    } else if (cmd.includes("workflow") || cmd.includes("bericht")) {
-      const nameMatch = raw.match(/["“](.+?)["”]/);
-      const wfName = nameMatch ? nameMatch[1] : "Allgemeiner Workflow";
-      addWorkflow(wfName, "generic", "yellow", "sv-chat");
+    } else if (cmd.indexOf("workflow") !== -1 || cmd.indexOf("bericht") !== -1) {
+      var nameMatch = raw.match(/["“](.+?)["”]/);
+      var wfName2 = nameMatch ? nameMatch[1] : "Allgemeiner Workflow";
+      addWorkflow(wfName2, "generic", "yellow", "sv-chat");
       svNotify(
         "success",
-        `Workflow „${wfName}“ als Entwurf angelegt (Zone: gelb). Bitte prüfen, bevor etwas extern verwendet wird.`,
+        "Workflow „" +
+          wfName2 +
+          "“ als Entwurf angelegt (Zone: gelb). Bitte prüfen, bevor etwas extern verwendet wird.",
         { popup: true, logType: "decision" }
       );
-    } else if (cmd.includes("behörde") || cmd.includes("finanz")) {
+    } else if (cmd.indexOf("behörde") !== -1 || cmd.indexOf("finanz") !== -1) {
       svNotify(
         "alarm",
         "Kritische Aktion erkannt (Behörde/Finanzen). HumanCore 1.0 arbeitet nur im Entwurfsmodus – keine direkte Außenkommunikation.",
         { popup: true, logType: "warning" }
       );
-    } else if (cmd.includes("auslastung") || cmd.includes("last")) {
-      const load = 35 + Math.floor(Math.random() * 25);
+    } else if (cmd.indexOf("auslastung") !== -1 || cmd.indexOf("last") !== -1) {
+      var load = 35 + Math.floor(Math.random() * 25);
       svNotify(
         "success",
-        `Aktuelle geschätzte Supervisor-Auslastung: ${load} %. Alle Worker innerhalb des sicheren Bereichs.`,
+        "Aktuelle geschätzte Supervisor-Auslastung: " +
+          load +
+          " %. Alle Worker innerhalb des sicheren Bereichs.",
         { popup: false, logType: "info" }
       );
-    } else if (cmd.includes("hilfe") || cmd.includes("help")) {
+    } else if (cmd.indexOf("hilfe") !== -1 || cmd.indexOf("help") !== -1) {
       svNotify(
         "ask",
         "Du kannst z.B. sagen: „Starte Workflow „Kundenbericht““, „Wie ist die aktuelle Auslastung?“, oder eine Datei anhängen, die als Entwurf-Workflow übernommen wird.",
         { popup: false, logType: "info" }
       );
-    } else if (cmd.includes("reset") || cmd.includes("zurücksetzen")) {
+    } else if (cmd.indexOf("reset") !== -1 || cmd.indexOf("zurücksetzen") !== -1) {
       svMessages = [];
       renderSvMessages();
       svNotify(
@@ -392,18 +440,21 @@ function initHumanCore() {
     svInput.value = "";
   }
 
-  // Supervisor Events
-
+  // Events Supervisor
   if (svToggleBtn) {
-    svToggleBtn.addEventListener("click", () => toggleSvPanel());
+    svToggleBtn.addEventListener("click", function () {
+      toggleSvPanel();
+    });
   }
 
   if (svCloseBtn) {
-    svCloseBtn.addEventListener("click", () => toggleSvPanel(false));
+    svCloseBtn.addEventListener("click", function () {
+      toggleSvPanel(false);
+    });
   }
 
   if (svMuteBtn) {
-    svMuteBtn.addEventListener("click", () => {
+    svMuteBtn.addEventListener("click", function () {
       svMuted = !svMuted;
       svMuteBtn.textContent = svMuted ? "🔕" : "🔔";
     });
@@ -414,7 +465,7 @@ function initHumanCore() {
   }
 
   if (svInput) {
-    svInput.addEventListener("keydown", (e) => {
+    svInput.addEventListener("keydown", function (e) {
       if (e.key === "Enter") {
         e.preventDefault();
         handleSvUserInput();
@@ -423,24 +474,29 @@ function initHumanCore() {
   }
 
   if (svFileInput) {
-    svFileInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
+    svFileInput.addEventListener("change", function (e) {
+      var file = e.target.files[0];
       if (!file) return;
       svAttachedFile = file;
       if (svAttachmentInfo) {
-        svAttachmentInfo.textContent = `Angehängte Datei: ${file.name} (Demo – es wird kein echter Upload durchgeführt)`;
+        svAttachmentInfo.textContent =
+          "Angehängte Datei: " +
+          file.name +
+          " (Demo – es wird kein echter Upload durchgeführt)";
         svAttachmentInfo.classList.remove("hidden");
       }
       svNotify(
         "success",
-        `Datei „${file.name}“ beim Supervisor vorgemerkt. Sende jetzt einen Auftrag, z.B. „Entwurf für diesen Antrag vorbereiten“.`,
+        "Datei „" +
+          file.name +
+          "“ beim Supervisor vorgemerkt. Sende jetzt einen Auftrag, z.B. „Entwurf für diesen Antrag vorbereiten“.",
         { popup: false, logType: "info" }
       );
     });
   }
 
   if (svPopupClose) {
-    svPopupClose.addEventListener("click", () => {
+    svPopupClose.addEventListener("click", function () {
       svPopup.classList.add("hidden");
     });
   }
@@ -456,7 +512,7 @@ function initHumanCore() {
   updateWorkflowCounter();
 }
 
-// Init ausführen – Script ist am Ende von <body>, aber wir sichern trotzdem ab
+// Init
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initHumanCore);
 } else {
