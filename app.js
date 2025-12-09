@@ -231,43 +231,65 @@
   };
 
   // ===========================
-  // Navigation (Sidebar)
-  // ===========================
+// Navigation (Sidebar)
+// ===========================
 
-  document.addEventListener("DOMContentLoaded", function () {
-    var navItems = document.querySelectorAll("[data-page-target]");
-    var pages = document.querySelectorAll("[data-page-id]");
+document.addEventListener("DOMContentLoaded", function () {
+  var navItems = document.querySelectorAll("[data-page-target]");
+  var pages = document.querySelectorAll("[data-page-id]");
 
-    function showPage(id) {
-      if (!pages || pages.length === 0) return;
-      pages.forEach(function (p) {
-        var pid = p.getAttribute("data-page-id");
-        if (pid === id) {
-          p.classList.remove("hidden");
-        } else {
-          p.classList.add("hidden");
-        }
+  if (!navItems.length || !pages.length) {
+    return; // keine Multi-Page-Nav vorhanden
+  }
+
+  function showPage(id) {
+    pages.forEach(function (p) {
+      var pid = p.getAttribute("data-page-id");
+      if (pid === id) {
+        p.classList.remove("hidden");
+      } else {
+        p.classList.add("hidden");
+      }
+    });
+  }
+
+  navItems.forEach(function (item) {
+    item.addEventListener("click", function (e) {
+      e.preventDefault();
+      var target = item.getAttribute("data-page-target");
+      if (!target) return;
+
+      // Active-Status in der Sidebar setzen
+      navItems.forEach(function (i) {
+        i.classList.remove("active");
       });
-    }
+      item.classList.add("active");
 
-    if (navItems && navItems.length > 0) {
-      navItems.forEach(function (item) {
-        item.addEventListener("click", function () {
-          var target = item.getAttribute("data-page-target");
-          if (!target) return;
-          navItems.forEach(function (i) {
-            i.classList.remove("active");
-          });
-          item.classList.add("active");
-          showPage(target);
-        });
-      });
-    }
-
-    // Initiales Rendern von Workflows und Logs
-    window.renderWorkflows(window.hcWorkflows || hcWorkflows);
-    window.renderLogs(window.hcLogs || hcLogs);
+      // Seite anzeigen
+      showPage(target);
+    });
   });
+
+  // Initiale Seite bestimmen:
+  // 1. Aktiver Nav-Eintrag
+  var activeNav = document.querySelector("[data-page-target].active");
+  if (activeNav) {
+    showPage(activeNav.getAttribute("data-page-target"));
+    return;
+  }
+
+  // 2. Fallback: Erste Seite
+  var firstPage = pages[0];
+  if (firstPage) {
+    var firstId = firstPage.getAttribute("data-page-id");
+    showPage(firstId);
+    // ersten Nav-Eintrag markieren
+    if (navItems[0]) {
+      navItems[0].classList.add("active");
+    }
+  }
+});
+
 
   // ===========================
   // Supervisor Chat & Popup
