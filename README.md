@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="HumanCore.ai Logo" width="220">
+</p>
+
 # HumanCore.ai – Multi-Agent Supervisor System (Demo UI)
 
 HumanCore.ai ist ein offenes, modular aufgebautes **Multi-Agent-Steuersystem**, das zeigt,  
@@ -15,53 +19,51 @@ https://humancoreai.github.io/HumanCore.ai/
 ## 🚀 Features (HumanCore 1.0 – Demo)
 
 ### **1. Supervisor-Konsole (SV)**
-- verarbeitet Nutzereingaben  
+Der Supervisor:
+
+- verarbeitet Eingaben  
 - erkennt kritische Vorgänge (rot)  
 - stellt Rückfragen (blau)  
 - bestätigt Erfolg (grün)  
 - legt Workflows an  
 - führt vollständiges Logging  
 - öffnet automatische Popups bei Alarmmeldungen  
-- kann Dateien entgegennehmen (Demo-Modus)
+- akzeptiert Datei-Uploads (Demo-Modus)
 
-### **2. Acht Worker-Agenten (vordefinierte Rollen)**
+### **2. Acht Worker-Agenten (feste Rollen)**
 
 | Agent | Aufgabe |
 |-------|---------|
 | Writer | Texte, Entwürfe, Beschreibungen |
 | Planner | Planung, Struktur, Prioritäten |
 | Data | Tabellen, Listen, Zusammenstellungen |
-| Research | Recherche & Orientierung (Demo) |
-| Support | Standardantworten, Servicebausteine |
-| Workflow | Prozessschritte & Statussimulation |
-| Creative | Layouts, Visualisierungen (statisch) |
-| Tech | Formatierung, Konvertierung (Demo) |
+| Research | Recherche & Orientierung |
+| Support | Standardantworten |
+| Workflow | Prozessschritte & Status |
+| Creative | Layout/Visual-Ideen |
+| Tech | Formatierung, Konvertierung |
 
-Alle Worker arbeiten **streng begrenzt**, immer im Entwurfsmodus  
-und ohne echte Systemzugriffe.
+Alle Worker arbeiten **streng begrenzt**, immer im Entwurfsmodus.
 
 ---
 
 ## 🖥️ UI-Module
 
-- **Dashboard**  
-- **Supervisor-Chat** (Hauptinteraktionspunkt)  
-- **Workflows**  
-- **Logs/Audit**  
-- **Agentenübersicht**  
-- **Wizard** (Konfigurationsvorschau)  
+- Dashboard  
+- Supervisor-Chat  
+- Agentenübersicht  
+- Workflow-Liste  
+- Logs/Audit  
+- Wizard (Konfigurationsvorschau)
 
-Die UI ist vollständig clientseitig (HTML/CSS/JS) und benötigt kein Backend.
+Die komplette UI basiert auf **HTML/CSS/JavaScript** – kein Backend nötig.
 
 ---
 
-## 📎 Datei-Upload (Demo-Modus)
+## 📎 Datei-Upload (Demo)
 
-Über den 📎-Button im Supervisor-Chat können Dateien ausgewählt werden.
-
-- Dateien werden **nicht hochgeladen**  
-- sondern nur als „Entwurfs-Workflows“ registriert  
-- ideal zum Testen von Prozessabläufen  
+Der 📎-Button im Supervisor-Chat akzeptiert Dateien.  
+Diese werden **nicht hochgeladen**, sondern nur als **Entwurfs-Workflows** markiert.
 
 ---
 
@@ -69,8 +71,8 @@ Die UI ist vollständig clientseitig (HTML/CSS/JS) und benötigt kein Backend.
 
 - 🟢 **Erfolg** – Workflow angelegt  
 - 🟦 **Nachfrage** – unklarer Auftrag  
-- 🔴 **Kritischer Vorgang** – (Behörde/Finanzen), wird blockiert  
-- 🔔 **Akustischer Alarm** (abschaltbar)
+- 🔴 **Kritisch** – blockiert (Behörde/Finanzen)  
+- 🔔 **Signalton** (abschaltbar)
 
 ---
 
@@ -80,5 +82,5 @@ Die UI ist vollständig clientseitig (HTML/CSS/JS) und benötigt kein Backend.
 Starte Workflow "Kundenbericht"
 Wie hoch ist die aktuelle Auslastung?
 Bereite einen Entwurf für diesen Antrag vor.
-Schick das an die Behörde    ← (Alarm – blockiert)
+Schick das an die Behörde    ← Alarm (blockiert)
 Hilfe
