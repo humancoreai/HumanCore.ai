@@ -84,10 +84,32 @@
 
 
         <!-- ============ WORKFLOWS ============ -->
-        <div class="section-header">
+        <section id="workflows" class="page-section">
   <h2>Workflows</h2>
   <span class="badge-pill" id="workflow-count-badge">0 Workflows</span>
-</div>
+
+  <div class="card workflow-card">
+    <div id="workflow-empty" class="muted-text">
+      Noch keine Workflows. Starte einen über den Supervisor-Chat (SV) oder den Wizard.
+    </div>
+
+    <div class="table-wrapper" id="workflow-table-wrapper" style="display:none;">
+      <table class="workflow-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Zone</th>
+            <th>Status</th>
+            <th>Erstellt</th>
+            <th>Quelle</th>
+          </tr>
+        </thead>
+        <tbody id="workflow-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 
 <div class="card workflow-card">
   <div id="workflow-empty" class="muted-text">
