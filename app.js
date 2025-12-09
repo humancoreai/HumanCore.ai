@@ -234,6 +234,36 @@
   // Navigation-Shortcuts (Scroll zu Bereichen)
   // ===========================
   document.addEventListener("DOMContentLoaded", function () {
+  var navButtons = document.querySelectorAll(".nav-btn");
+  var sections = document.querySelectorAll(".page-section");
+
+  function activateSection(id) {
+    sections.forEach(function (sec) {
+      if (sec.id === id) {
+        sec.classList.add("active");
+      } else {
+        sec.classList.remove("active");
+      }
+    });
+  }
+
+  // ===========================
+// Seiten-Navigation (Tabs)
+// ===========================
+
+  navButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var target = btn.getAttribute("data-target");
+      if (target) {
+        activateSection(target);
+      }
+    });
+  });
+
+  // Standard-Startseite
+  activateSection("dashboard");
+});
+
     // Workflows & Logs initial zeichnen (falls Tabellen da sind)
     if (typeof window.renderWorkflows === "function") {
       try {
