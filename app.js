@@ -1,340 +1,277 @@
-// ===========================
-// HumanCore.ai – app.js (ES5-kompatibel)
-// ===========================
+// ============================================================================
+// HumanCore.ai – Frontend-Logik
+// ============================================================================
 
-var hcConfig = null;
-var hcWorkflows = [];
-var hcLogs = [];
+(function () {
+  "use strict";
 
-window.hcConfig = hcConfig;
-window.hcWorkflows = hcWorkflows;
-window.hcLogs = hcLogs;
+  // ===========================
+  // Globale Datenstrukturen
+  // ===========================
 
-function initHumanCore() {
-  // ---------- Navigation ----------
-  var navButtons = document.querySelectorAll(".nav-btn");
-  var sections = document.querySelectorAll(".page-section");
+  // Workflows (werden vom Supervisor / Wizard angelegt)
+  var hcWorkflows = window.hcWorkflows || [];
 
-  function showSection(id) {
-    for (var i = 0; i < sections.length; i++) {
-      var sec = sections[i];
-      if (sec.id === id) {
-        sec.classList.add("active");
-      } else {
-        sec.classList.remove("active");
-      }
-    }
-  }
+  // Logs (Supervisor, System, später Worker)
+  var hcLogs = window.hcLogs || [];
 
-  for (var i = 0; i < navButtons.length; i++) {
-    navButtons[i].addEventListener("click", (function () {
-      var target = navButtons[i].getAttribute("data-target");
-      return function () {
-        if (target) showSection(target);
-      };
-    })());
-  }
-
-  // ---------- Dashboard ----------
-  var wfCounterEl = document.getElementById("wf-counter");
-
-  function updateWorkflowCounter() {
-    if (!wfCounterEl) return;
-    if (!hcWorkflows.length) {
-      wfCounterEl.textContent = "Keine Workflows gestartet";
-    } else {
-      var count = hcWorkflows.length;
-      wfCounterEl.textContent =
-        count + " Workflow" + (count === 1 ? "" : "s") + " aktiv/geplant (Demo)";
-    }
-  }
-
-  // ---------- Wizard ----------
-  var wizName = document.getElementById("wiz-name");
-  var wizAutonomy = document.getElementById("wiz-autonomy");
-  var wizCritical = document.getElementById("wiz-critical");
-  var wizGenerate = document.getElementById("wiz-generate");
-  var wizOutput = document.getElementById("wiz-output");
-  var configBox = document.getElementById("config-box");
-
-  function generateConfig() {
-    var displayName =
-      wizName && wizName.value && wizName.value.trim()
-        ? wizName.value.trim()
-        : "HumanCore Supervisor";
-    var autonomy =
-      wizAutonomy && wizAutonomy.value
-        ? parseInt(wizAutonomy.value, 10) || 0
-        : 0;
-    var confirmCritical =
-      wizCritical && wizCritical.value
-        ? wizCritical.value === "true"
-        : true;
-
-    hcConfig = {
-      displayName: displayName,
-      mode: "experte",
-      autonomy: autonomy,
-      confirmCritical: confirmCritical,
-      explainWarnings: true,
-      maxProcesses: 8,
-      autoscale: "soft",
-      enableGroups: false,
-      logRetention: "6m",
-      configRetention: "12m",
-      anonLogs: true,
-      updatedAt: new Date().toISOString()
-    };
-
-    window.hcConfig = hcConfig;
-
-    var pretty = JSON.stringify(hcConfig, null, 2);
-    if (wizOutput) wizOutput.textContent = pretty;
-    if (configBox) configBox.textContent = pretty;
-
-    addLog("Wizard", "info", "Neue Konfiguration erzeugt.", { config: hcConfig });
-  }
-
-  if (wizGenerate) {
-    wizGenerate.addEventListener("click", generateConfig);
-  }
-
-  // ---------- Logs ----------
-  var logList = document.getElementById("log-list");
+  // ===========================
+  // Logging
+  // ===========================
 
   function addLog(source, type, message, context) {
-    if (!context) context = {};
     var entry = {
-      timestamp: new Date().toISOString(),
-      source: source,
-      type: type,
-      message: message,
-      context: context
+      id: "log-" + Date.now() + "-" + Math.floor(Math.random() * 9999),
+      source: source || "System",
+      type: type || "info",
+      message: message || "",
+      context: context || {},
+      createdAt: new Date().toISOString()
     };
+
     hcLogs.push(entry);
-    window.hcLogs = hcLogs;
-    renderLogs(hcLogs);
-  }
+    window.hcLogs = hcLogs.slice();
 
-  function renderLogs(logs) {
-    if (!logList) return;
-    logList.innerHTML = "";
-
-    if (!logs.length) {
-      var p = document.createElement("p");
-      p.textContent = "Keine Logs vorhanden.";
-      logList.appendChild(p);
-      return;
-    }
-
-    for (var i = logs.length - 1; i >= 0; i--) {
-      var entry = logs[i];
-      var div = document.createElement("div");
-      div.style.borderBottom = "1px solid rgba(148,163,184,0.3)";
-      div.style.padding = "4px 0";
-      var time = new Date(entry.timestamp).toLocaleString();
-      div.innerHTML =
-        "<strong>[" +
-        time +
-        "] " +
-        entry.source +
-        "</strong> (" +
-        entry.type +
-        "): " +
-        entry.message;
-      logList.appendChild(div);
+    if (typeof window.renderLogs === "function") {
+      window.renderLogs(window.hcLogs);
     }
   }
 
-  window.renderLogs = renderLogs;
-
-  // ---------- Workflows ----------
-  var workflowList = document.getElementById("workflow-list");
+  // ===========================
+  // Workflows
+  // ===========================
 
   function addWorkflow(name, type, zone, origin, extra) {
     if (!extra) extra = {};
+
     var wf = {
-      id: "wf-" + Date.now() + "-" + Math.floor(Math.random() * 9999),
-      name: name,
-      type: type,
-      zone: zone,
-      status: "planned",
+      id:
+        "wf-" +
+        Date.now() +
+        "-" +
+        Math.floor(Math.random() * 9999),
+      name: name || "Unbenannter Workflow",
+      type: type || "generic",
+      zone: zone || "yellow", // red / yellow / green
+      status: "planned", // planned / running / waiting / done
+      origin: origin || "sv",
+      meta: extra,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      origin: origin
+      updatedAt: new Date().toISOString()
     };
-    // extra-Eigenschaften dranhängen
-    for (var k in extra) {
-      if (extra.hasOwnProperty(k)) {
-        wf[k] = extra[k];
-      }
-    }
 
     hcWorkflows.push(wf);
-    window.hcWorkflows = hcWorkflows;
-    renderWorkflows(hcWorkflows);
-    updateWorkflowCounter();
-    addLog(
-      "Supervisor",
-      "decision",
-      'Workflow „' + name + "“ angelegt (Zone: " + zone + ").",
-      { workflow: wf }
-    );
+    window.hcWorkflows = hcWorkflows.slice();
+
+    addLog("Supervisor", "workflow", "Workflow angelegt: " + wf.name, {
+      workflowId: wf.id,
+      zone: wf.zone
+    });
+
+    if (typeof window.renderWorkflows === "function") {
+      window.renderWorkflows(window.hcWorkflows);
+    }
+
     return wf;
   }
 
-  function renderWorkflows(workflows) {
-    if (!workflowList) return;
-    workflowList.innerHTML = "";
+  // ===========================
+  // Workflow-Rendering
+  // ===========================
 
-    if (!workflows.length) {
-      var p = document.createElement("p");
-      p.textContent = "Keine Workflows vorhanden.";
-      workflowList.appendChild(p);
+  window.renderWorkflows = function (workflows) {
+    var tbody = document.getElementById("workflow-table-body");
+    var empty = document.getElementById("workflow-empty");
+    var wrapper = document.getElementById("workflow-table-wrapper");
+    var badge = document.getElementById("workflow-count-badge");
+
+    if (!tbody) {
+      // Workflows-UI nicht auf dieser Seite / noch nicht vorhanden
       return;
     }
 
-    for (var i = workflows.length - 1; i >= 0; i--) {
-      var wf = workflows[i];
-      var row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.justifyContent = "space-between";
-      row.style.alignItems = "center";
-      row.style.padding = "4px 0";
-      row.style.borderBottom = "1px solid rgba(148,163,184,0.3)";
+    tbody.innerHTML = "";
 
-      var left = document.createElement("div");
-      left.innerHTML =
-        "<strong>" +
-        wf.name +
-        "</strong> <span style=\"color:#64748b;\">(" +
-        wf.type +
-        ")</span>";
+    var list = Array.isArray(workflows) ? workflows.slice() : [];
 
-      var right = document.createElement("div");
-      right.style.fontSize = "11px";
-      right.style.color = "#94a3b8";
-      right.textContent =
-        "Zone: " + wf.zone + " • Status: " + wf.status;
-
-      row.appendChild(left);
-      row.appendChild(right);
-      workflowList.appendChild(row);
+    if (list.length === 0) {
+      if (empty) empty.style.display = "block";
+      if (wrapper) wrapper.style.display = "none";
+      if (badge) badge.textContent = "0 Workflows";
+      return;
     }
-  }
 
-  window.renderWorkflows = renderWorkflows;
-// ===========================
-// Workflow-Rendering
-// ===========================
+    // Neueste zuerst
+    list.sort(function (a, b) {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
 
-window.renderWorkflows = function (workflows) {
-  const tbody = document.getElementById("workflow-table-body");
-  const empty = document.getElementById("workflow-empty");
-  const wrapper = document.getElementById("workflow-table-wrapper");
-  const badge = document.getElementById("workflow-count-badge");
+    list.forEach(function (wf) {
+      var tr = document.createElement("tr");
 
-  if (!tbody) {
-    // Workflows-UI nicht auf dieser Seite / noch nicht geladen
-    return;
-  }
+      // Name
+      var tdName = document.createElement("td");
+      tdName.textContent = wf.name || "Unbenannter Workflow";
+      tr.appendChild(tdName);
 
-  tbody.innerHTML = "";
+      // Zone
+      var tdZone = document.createElement("td");
+      var zoneSpan = document.createElement("span");
+      zoneSpan.classList.add("zone-pill");
+      var zone = (wf.zone || "yellow").toLowerCase();
+      if (zone === "red") {
+        zoneSpan.classList.add("zone-red");
+        zoneSpan.textContent = "Rot";
+      } else if (zone === "green") {
+        zoneSpan.classList.add("zone-green");
+        zoneSpan.textContent = "Grün";
+      } else {
+        zoneSpan.classList.add("zone-yellow");
+        zoneSpan.textContent = "Gelb";
+      }
+      tdZone.appendChild(zoneSpan);
+      tr.appendChild(tdZone);
 
-  const list = Array.isArray(workflows) ? [...workflows] : [];
-  if (list.length === 0) {
-    if (empty) empty.style.display = "block";
-    if (wrapper) wrapper.style.display = "none";
-    if (badge) badge.textContent = "0 Workflows";
-    return;
-  }
+      // Status
+      var tdStatus = document.createElement("td");
+      var statusSpan = document.createElement("span");
+      statusSpan.classList.add("status-pill");
+      var status = (wf.status || "planned").toLowerCase();
+      if (status === "running") {
+        statusSpan.textContent = "Laufend";
+      } else if (status === "waiting") {
+        statusSpan.textContent = "Wartet";
+      } else if (status === "done") {
+        statusSpan.textContent = "Fertig";
+      } else {
+        statusSpan.textContent = "Geplant";
+      }
+      tdStatus.appendChild(statusSpan);
+      tr.appendChild(tdStatus);
 
-  // Neueste zuerst
-  list.sort(
-    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-  );
+      // Datum
+      var tdDate = document.createElement("td");
+      var created = wf.createdAt ? new Date(wf.createdAt) : null;
+      if (created && !isNaN(created)) {
+        tdDate.textContent = created.toLocaleString(undefined, {
+          dateStyle: "short",
+          timeStyle: "short"
+        });
+      } else {
+        tdDate.textContent = "–";
+      }
+      tr.appendChild(tdDate);
 
-  list.forEach((wf) => {
-    const tr = document.createElement("tr");
+      // Quelle
+      var tdOrigin = document.createElement("td");
+      tdOrigin.textContent = wf.origin || "SV";
+      tr.appendChild(tdOrigin);
 
-    // Name
-    const tdName = document.createElement("td");
-    tdName.textContent = wf.name || "Unbenannter Workflow";
-    tr.appendChild(tdName);
+      tbody.appendChild(tr);
+    });
 
-    // Zone
-    const tdZone = document.createElement("td");
-    const zone = (wf.zone || "yellow").toLowerCase();
-    const zoneSpan = document.createElement("span");
-    zoneSpan.classList.add("zone-pill");
-    if (zone === "red") {
-      zoneSpan.classList.add("zone-red");
-      zoneSpan.textContent = "Rot";
-    } else if (zone === "green") {
-      zoneSpan.classList.add("zone-green");
-      zoneSpan.textContent = "Grün";
-    } else {
-      zoneSpan.classList.add("zone-yellow");
-      zoneSpan.textContent = "Gelb";
+    if (empty) empty.style.display = "none";
+    if (wrapper) wrapper.style.display = "block";
+    if (badge) {
+      var count = list.length;
+      badge.textContent = count === 1 ? "1 Workflow" : count + " Workflows";
     }
-    tdZone.appendChild(zoneSpan);
-    tr.appendChild(tdZone);
+  };
 
-    // Status
-    const tdStatus = document.createElement("td");
-    const statusSpan = document.createElement("span");
-    statusSpan.classList.add("status-pill");
-    const status = (wf.status || "planned").toLowerCase();
-    if (status === "running") {
-      statusSpan.textContent = "Laufend";
-    } else if (status === "waiting") {
-      statusSpan.textContent = "Wartet";
-    } else if (status === "done") {
-      statusSpan.textContent = "Fertig";
-    } else {
-      statusSpan.textContent = "Geplant";
+  // ===========================
+  // (Optional) Logs-Rendering
+  // ===========================
+
+  window.renderLogs = function (logs) {
+    var tbody = document.getElementById("logs-table-body");
+    var empty = document.getElementById("logs-empty");
+    var wrapper = document.getElementById("logs-table-wrapper");
+
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    var list = Array.isArray(logs) ? logs.slice() : [];
+
+    if (list.length === 0) {
+      if (empty) empty.style.display = "block";
+      if (wrapper) wrapper.style.display = "none";
+      return;
     }
-    tdStatus.appendChild(statusSpan);
-    tr.appendChild(tdStatus);
 
-    // Datum
-    const tdDate = document.createElement("td");
-    let created = wf.createdAt ? new Date(wf.createdAt) : null;
-    if (created && !isNaN(created)) {
-      tdDate.textContent = created.toLocaleString(undefined, {
-        dateStyle: "short",
-        timeStyle: "short",
+    list.sort(function (a, b) {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
+    list.forEach(function (log) {
+      var tr = document.createElement("tr");
+
+      var tdTime = document.createElement("td");
+      var t = log.createdAt ? new Date(log.createdAt) : null;
+      tdTime.textContent = t && !isNaN(t) ? t.toLocaleTimeString() : "–";
+      tr.appendChild(tdTime);
+
+      var tdSource = document.createElement("td");
+      tdSource.textContent = log.source || "System";
+      tr.appendChild(tdSource);
+
+      var tdType = document.createElement("td");
+      tdType.textContent = log.type || "info";
+      tr.appendChild(tdType);
+
+      var tdMsg = document.createElement("td");
+      tdMsg.textContent = log.message || "";
+      tr.appendChild(tdMsg);
+
+      tbody.appendChild(tr);
+    });
+
+    if (empty) empty.style.display = "none";
+    if (wrapper) wrapper.style.display = "block";
+  };
+
+  // ===========================
+  // Navigation (Sidebar)
+  // ===========================
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var navItems = document.querySelectorAll("[data-page-target]");
+    var pages = document.querySelectorAll("[data-page-id]");
+
+    function showPage(id) {
+      if (!pages || pages.length === 0) return;
+      pages.forEach(function (p) {
+        var pid = p.getAttribute("data-page-id");
+        if (pid === id) {
+          p.classList.remove("hidden");
+        } else {
+          p.classList.add("hidden");
+        }
       });
-    } else {
-      tdDate.textContent = "–";
     }
-    tr.appendChild(tdDate);
 
-    // Quelle
-    const tdOrigin = document.createElement("td");
-    tdOrigin.textContent = wf.origin || "SV";
-    tr.appendChild(tdOrigin);
+    if (navItems && navItems.length > 0) {
+      navItems.forEach(function (item) {
+        item.addEventListener("click", function () {
+          var target = item.getAttribute("data-page-target");
+          if (!target) return;
+          navItems.forEach(function (i) {
+            i.classList.remove("active");
+          });
+          item.classList.add("active");
+          showPage(target);
+        });
+      });
+    }
 
-    tbody.appendChild(tr);
+    // Initiales Rendern von Workflows und Logs
+    window.renderWorkflows(window.hcWorkflows || hcWorkflows);
+    window.renderLogs(window.hcLogs || hcLogs);
   });
 
-  if (empty) empty.style.display = "none";
-  if (wrapper) wrapper.style.display = "block";
-  if (badge) {
-    const count = list.length;
-    badge.textContent =
-      count === 1 ? "1 Workflow" : `${count} Workflows`;
-  }
-};
-
-// Initial render (falls SV schon Workflows angelegt hat)
-document.addEventListener("DOMContentLoaded", () => {
-  if (typeof window.hcWorkflows !== "undefined") {
-    window.renderWorkflows(window.hcWorkflows || []);
-  }
-});
-
-  // ---------- Supervisor Chat & Popup ----------
+  // ===========================
+  // Supervisor Chat & Popup
+  // ===========================
 
   var svToggleBtn = document.getElementById("sv-toggle-btn");
   var svPanel = document.getElementById("sv-chat-panel");
@@ -498,7 +435,10 @@ document.addEventListener("DOMContentLoaded", () => {
           "“ wurde angelegt (Zone: gelb).",
         { popup: true, logType: "decision" }
       );
-    } else if (cmd.indexOf("workflow") !== -1 || cmd.indexOf("bericht") !== -1) {
+    } else if (
+      cmd.indexOf("workflow") !== -1 ||
+      cmd.indexOf("bericht") !== -1
+    ) {
       var nameMatch = raw.match(/["“](.+?)["”]/);
       var wfName2 = nameMatch ? nameMatch[1] : "Allgemeiner Workflow";
       addWorkflow(wfName2, "generic", "yellow", "sv-chat");
@@ -509,13 +449,19 @@ document.addEventListener("DOMContentLoaded", () => {
           "“ als Entwurf angelegt (Zone: gelb). Bitte prüfen, bevor etwas extern verwendet wird.",
         { popup: true, logType: "decision" }
       );
-    } else if (cmd.indexOf("behörde") !== -1 || cmd.indexOf("finanz") !== -1) {
+    } else if (
+      cmd.indexOf("behörde") !== -1 ||
+      cmd.indexOf("finanz") !== -1
+    ) {
       svNotify(
         "alarm",
         "Kritische Aktion erkannt (Behörde/Finanzen). HumanCore 1.0 arbeitet nur im Entwurfsmodus – keine direkte Außenkommunikation.",
         { popup: true, logType: "warning" }
       );
-    } else if (cmd.indexOf("auslastung") !== -1 || cmd.indexOf("last") !== -1) {
+    } else if (
+      cmd.indexOf("auslastung") !== -1 ||
+      cmd.indexOf("last") !== -1
+    ) {
       var load = 35 + Math.floor(Math.random() * 25);
       svNotify(
         "success",
@@ -530,7 +476,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "Du kannst z.B. sagen: „Starte Workflow „Kundenbericht““, „Wie ist die aktuelle Auslastung?“, oder eine Datei anhängen, die als Entwurf-Workflow übernommen wird.",
         { popup: false, logType: "info" }
       );
-    } else if (cmd.indexOf("reset") !== -1 || cmd.indexOf("zurücksetzen") !== -1) {
+    } else if (
+      cmd.indexOf("reset") !== -1 ||
+      cmd.indexOf("zurücksetzen") !== -1
+    ) {
       svMessages = [];
       renderSvMessages();
       svNotify(
@@ -598,32 +547,15 @@ document.addEventListener("DOMContentLoaded", () => {
         "success",
         "Datei „" +
           file.name +
-          "“ beim Supervisor vorgemerkt. Sende jetzt einen Auftrag, z.B. „Entwurf für diesen Antrag vorbereiten“.",
+          "“ beim Supervisor vorgemerkt. Sende jetzt einen Auftrag, z.B. „Entwurf für diesen Antrag vorbereiten“. ",
         { popup: false, logType: "info" }
       );
     });
   }
 
-  if (svPopupClose) {
+  if (svPopupClose && svPopup) {
     svPopupClose.addEventListener("click", function () {
       svPopup.classList.add("hidden");
     });
   }
-
-  // Initiale Meldungen
-  addLog("System", "info", "HumanCore 1.0 UI initialisiert.");
-  svNotify(
-    "success",
-    "Supervisor bereit. Du kannst Workflows starten, Dokumente als Entwurf übernehmen und die aktuelle Auslastung abfragen. HumanCore 1.0 arbeitet im sicheren Demo-Modus – keine echte Außenkommunikation.",
-    { popup: false, logType: "info" }
-  );
-
-  updateWorkflowCounter();
-}
-
-// Init
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initHumanCore);
-} else {
-  initHumanCore();
-}
+})();
