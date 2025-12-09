@@ -224,6 +224,115 @@ function initHumanCore() {
   }
 
   window.renderWorkflows = renderWorkflows;
+// ===========================
+// Workflow-Rendering
+// ===========================
+
+window.renderWorkflows = function (workflows) {
+  const tbody = document.getElementById("workflow-table-body");
+  const empty = document.getElementById("workflow-empty");
+  const wrapper = document.getElementById("workflow-table-wrapper");
+  const badge = document.getElementById("workflow-count-badge");
+
+  if (!tbody) {
+    // Workflows-UI nicht auf dieser Seite / noch nicht geladen
+    return;
+  }
+
+  tbody.innerHTML = "";
+
+  const list = Array.isArray(workflows) ? [...workflows] : [];
+  if (list.length === 0) {
+    if (empty) empty.style.display = "block";
+    if (wrapper) wrapper.style.display = "none";
+    if (badge) badge.textContent = "0 Workflows";
+    return;
+  }
+
+  // Neueste zuerst
+  list.sort(
+    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  );
+
+  list.forEach((wf) => {
+    const tr = document.createElement("tr");
+
+    // Name
+    const tdName = document.createElement("td");
+    tdName.textContent = wf.name || "Unbenannter Workflow";
+    tr.appendChild(tdName);
+
+    // Zone
+    const tdZone = document.createElement("td");
+    const zone = (wf.zone || "yellow").toLowerCase();
+    const zoneSpan = document.createElement("span");
+    zoneSpan.classList.add("zone-pill");
+    if (zone === "red") {
+      zoneSpan.classList.add("zone-red");
+      zoneSpan.textContent = "Rot";
+    } else if (zone === "green") {
+      zoneSpan.classList.add("zone-green");
+      zoneSpan.textContent = "Grün";
+    } else {
+      zoneSpan.classList.add("zone-yellow");
+      zoneSpan.textContent = "Gelb";
+    }
+    tdZone.appendChild(zoneSpan);
+    tr.appendChild(tdZone);
+
+    // Status
+    const tdStatus = document.createElement("td");
+    const statusSpan = document.createElement("span");
+    statusSpan.classList.add("status-pill");
+    const status = (wf.status || "planned").toLowerCase();
+    if (status === "running") {
+      statusSpan.textContent = "Laufend";
+    } else if (status === "waiting") {
+      statusSpan.textContent = "Wartet";
+    } else if (status === "done") {
+      statusSpan.textContent = "Fertig";
+    } else {
+      statusSpan.textContent = "Geplant";
+    }
+    tdStatus.appendChild(statusSpan);
+    tr.appendChild(tdStatus);
+
+    // Datum
+    const tdDate = document.createElement("td");
+    let created = wf.createdAt ? new Date(wf.createdAt) : null;
+    if (created && !isNaN(created)) {
+      tdDate.textContent = created.toLocaleString(undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+    } else {
+      tdDate.textContent = "–";
+    }
+    tr.appendChild(tdDate);
+
+    // Quelle
+    const tdOrigin = document.createElement("td");
+    tdOrigin.textContent = wf.origin || "SV";
+    tr.appendChild(tdOrigin);
+
+    tbody.appendChild(tr);
+  });
+
+  if (empty) empty.style.display = "none";
+  if (wrapper) wrapper.style.display = "block";
+  if (badge) {
+    const count = list.length;
+    badge.textContent =
+      count === 1 ? "1 Workflow" : `${count} Workflows`;
+  }
+};
+
+// Initial render (falls SV schon Workflows angelegt hat)
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof window.hcWorkflows !== "undefined") {
+    window.renderWorkflows(window.hcWorkflows || []);
+  }
+});
 
   // ---------- Supervisor Chat & Popup ----------
 
