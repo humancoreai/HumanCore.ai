@@ -1,76 +1,84 @@
-<p align="center">
-  <img src="assets/logo.png" alt="HumanCore Logo" width="220" />
-</p>
-# HumanCore.ai
-**HumanCore.ai** ist ein offenes, modulares KI-Agentensystem mit einem zentralen **Supervisor**, mehreren **Worker-Agenten**, einem vollständigen **Wizard-Setup**, **Dashboard**, **Workflow-System**  und **Audit-Logs**.  
-Es wurde entwickelt, um KI-gestützte Automatisierung für *jedermann* verständlich, sicher und flexibel nutzbar zu machen.
+# HumanCore.ai – Multi-Agent Supervisor System (Demo UI)
+
+HumanCore.ai ist ein offenes, modular aufgebautes **Multi-Agent-Steuersystem**, das zeigt,  
+wie ein zentraler Supervisor komplexe Arbeitsabläufe koordinieren, Workflows auslösen,  
+Ereignisse auswerten und Risiken bewerten kann – unterstützt durch spezialisierte Worker-Agenten.
+
+Das Projekt dient als **UI-Demonstration** und **Konzeptstudie**, wie moderne KI-Systeme  
+in Unternehmen, Verwaltung und Alltagsprozessen eingesetzt werden können.
+
+👉 **Live-Demo:**  
+https://humancoreai.github.io/HumanCore.ai/
 
 ---
 
-## 🚀 Features
+## 🚀 Features (HumanCore 1.0 – Demo)
 
-- **Supervisor-System**  
-  Zentrale Logik für Steuerung, Sicherheit, Routing & Priorisierung.
+### **1. Supervisor-Konsole (SV)**
+- verarbeitet Nutzereingaben  
+- erkennt kritische Vorgänge (rot)  
+- stellt Rückfragen (blau)  
+- bestätigt Erfolg (grün)  
+- legt Workflows an  
+- führt vollständiges Logging  
+- öffnet automatische Popups bei Alarmmeldungen  
+- kann Dateien entgegennehmen (Demo-Modus)
 
-- **Wizard-Konfiguration**  
-  Schritt-für-Schritt-Setup für Stil, Autonomie, Sicherheit, Aufbewahrung & Agentenparameter.
+### **2. Acht Worker-Agenten (vordefinierte Rollen)**
+
+| Agent | Aufgabe |
+|-------|---------|
+| Writer | Texte, Entwürfe, Beschreibungen |
+| Planner | Planung, Struktur, Prioritäten |
+| Data | Tabellen, Listen, Zusammenstellungen |
+| Research | Recherche & Orientierung (Demo) |
+| Support | Standardantworten, Servicebausteine |
+| Workflow | Prozessschritte & Statussimulation |
+| Creative | Layouts, Visualisierungen (statisch) |
+| Tech | Formatierung, Konvertierung (Demo) |
+
+Alle Worker arbeiten **streng begrenzt**, immer im Entwurfsmodus  
+und ohne echte Systemzugriffe.
+
+---
+
+## 🖥️ UI-Module
 
 - **Dashboard**  
-  Übersicht über Auslastung, aktive Prozesse, Statusindikatoren, Systemmeldungen und Aktivitäten.
+- **Supervisor-Chat** (Hauptinteraktionspunkt)  
+- **Workflows**  
+- **Logs/Audit**  
+- **Agentenübersicht**  
+- **Wizard** (Konfigurationsvorschau)  
 
-- **Agenten-Modell (8 Worker + 1 Supervisor)**  
-  Writer, Planner, Data, Research, Support, Workflow, Creative, Tech.
-
-- **Workflow-System**  
-  Standardprozesse (Entwürfe, Reports, interne Abläufe) mit Farbcodierung (grün/gelb/rot).
-
-- **Audit-Log**  
-  Transparente Systemereignisse, Versionierung & Sicherheitsfokus.
-
-- **Gruppierbare Agenten**  
-  Perfekt für Skalierung oder parallele Prozesse (Writer-1, Writer-2 …).
-
-- **Datenschutz- & Aufbewahrungskonzept**  
-  Konfigurierbare Log-Rotation, Anonymisierung, automatische Löschlogik.
+Die UI ist vollständig clientseitig (HTML/CSS/JS) und benötigt kein Backend.
 
 ---
 
-## 🧩 Installation (lokal)
+## 📎 Datei-Upload (Demo-Modus)
 
-1. ZIP herunterladen  
-2. Dateien entpacken  
-3. `index.html` im Browser öffnen  
-4. Wizard starten → System konfigurieren  
-5. Nutzung komplett im Browser, ohne Backend
+Über den 📎-Button im Supervisor-Chat können Dateien ausgewählt werden.
 
----
-
-## 📦 Inhalt des UI-Pakets
-
-- `index.html` – Hauptanwendung  
-- `assets/style.css` – UI & Styling  
-- `assets/app.js` – Logik, Wizard, Routing, Dashboard  
-- Keine externen Server nötig (localStorage-basiert)
+- Dateien werden **nicht hochgeladen**  
+- sondern nur als „Entwurfs-Workflows“ registriert  
+- ideal zum Testen von Prozessabläufen  
 
 ---
 
-## 🔧 Roadmap
+## 🎨 Farbcodiertes Feedback
 
-- Erweiterbare Agenten  
-- Plugin-System  
-- API-Brücke  
-- Team-Modus  
-- KI-gestützte Prozessoptimierung  
-- Export/Import für Konfigurationen
+- 🟢 **Erfolg** – Workflow angelegt  
+- 🟦 **Nachfrage** – unklarer Auftrag  
+- 🔴 **Kritischer Vorgang** – (Behörde/Finanzen), wird blockiert  
+- 🔔 **Akustischer Alarm** (abschaltbar)
 
 ---
 
-## 📝 Lizenz
+## 💬 Beispiele für SV-Befehle
 
-MIT – frei nutzbar, anpassbar, weiterentwickelbar.
-
----
-
-## ❤️ Beitrag
-
-Pull Requests, Issues, Ideen und Erweiterungen sind willkommen.
+```text
+Starte Workflow "Kundenbericht"
+Wie hoch ist die aktuelle Auslastung?
+Bereite einen Entwurf für diesen Antrag vor.
+Schick das an die Behörde    ← (Alarm – blockiert)
+Hilfe
