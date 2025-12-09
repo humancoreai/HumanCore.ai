@@ -230,7 +230,63 @@
     if (wrapper) wrapper.style.display = "block";
   };
 
- 
+   // ===========================
+  // Navigation-Shortcuts (Scroll zu Bereichen)
+  // ===========================
+  document.addEventListener("DOMContentLoaded", function () {
+    // Workflows & Logs initial zeichnen (falls Tabellen da sind)
+    if (typeof window.renderWorkflows === "function") {
+      try {
+        window.renderWorkflows(window.hcWorkflows || hcWorkflows || []);
+      } catch (e) {}
+    }
+    if (typeof window.renderLogs === "function") {
+      try {
+        window.renderLogs(window.hcLogs || hcLogs || []);
+      } catch (e) {}
+    }
+
+    // Map: Button-Text -> Überschrift-Text
+    var targetsMap = {
+      Dashboard: "Dashboard",
+      Wizard: "Wizard",
+      Workflows: "Workflows",
+      Logs: "System-Logs",
+      Konfiguration: "Konfiguration"
+    };
+
+    // Alle H2-Überschriften einsammeln
+    var sectionByTitle = {};
+    var headings = document.querySelectorAll("h2");
+    headings.forEach(function (h2) {
+      var t = (h2.textContent || "").trim();
+      if (t) {
+        sectionByTitle[t] = h2;
+      }
+    });
+
+    // Kandidaten für die Navigation: Buttons / Links / Spans
+    var navCandidates = document.querySelectorAll("button, a, span");
+    navCandidates.forEach(function (el) {
+      var label = (el.textContent || "").trim();
+      if (!targetsMap[label]) return;
+
+      el.style.cursor = "pointer";
+
+      el.addEventListener("click", function (e) {
+        var targetTitle = targetsMap[label];
+        var targetHeading = sectionByTitle[targetTitle];
+        if (targetHeading && typeof targetHeading.scrollIntoView === "function") {
+          e.preventDefault();
+          targetHeading.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+        }
+      });
+    });
+  });
+
   // ===========================
   // Supervisor Chat & Popup
   // ===========================
