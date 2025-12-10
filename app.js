@@ -208,7 +208,7 @@
       name: name || "Unbenannter Workflow",
       type: type || "generic",
       zone: (zone || "yellow").toLowerCase(),
-      status: "planned",
+      status: "planned", // B3 später: State-Maschine
       origin: origin || "SV",
       meta: extra,
       createdAt: new Date().toISOString(),
@@ -224,7 +224,7 @@
       zone: wf.zone
     });
 
-    // B1: Worker-Zuweisung (einfache Simulation)
+    // B1: erste automatische Zuweisung versuchen
     autoAssignWorkflowToWorker(wf);
 
     renderWorkflows();
@@ -294,6 +294,8 @@
       var statusSpan = document.createElement("span");
       statusSpan.classList.add("status-pill");
       var status = (wf.status || "planned").toLowerCase();
+
+      // B1: queued als eigener Zustand anzeigen
       if (status === "running") {
         statusSpan.textContent = "Laufend";
       } else if (status === "waiting") {
@@ -304,9 +306,12 @@
         statusSpan.textContent = "Fehlgeschlagen";
       } else if (status === "cancelled") {
         statusSpan.textContent = "Abgebrochen";
+      } else if (status === "queued") {
+        statusSpan.textContent = "In Warteschlange";
       } else {
         statusSpan.textContent = "Geplant";
       }
+
       tdStatus.appendChild(statusSpan);
       tr.appendChild(tdStatus);
 
@@ -362,6 +367,11 @@
   }
 
   function autoAssignWorkflowToWorker(wf) {
+    // Nur zuweisen, wenn noch kein Worker und Status "planned"
+    if (wf.assignedWorkerId || wf.status !== "planned") {
+      return;
+    }
+
     var role = chooseWorkerRoleForWorkflow(wf);
 
     // 1. passenden, idle Worker suchen
@@ -458,6 +468,13 @@
 
   function workerTick() {
     var now = Date.now();
+
+    // 0. Sicherheitsnetz: alle noch nicht zugewiesenen Workflows zuweisen
+    hcWorkflows.forEach(function (wf) {
+      if (!wf.assignedWorkerId && wf.status === "planned") {
+        autoAssignWorkflowToWorker(wf);
+      }
+    });
 
     // 1. Laufende Tasks prüfen
     hcWorkers.forEach(function (w) {
