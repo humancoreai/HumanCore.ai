@@ -5,23 +5,19 @@
   <title>HumanCore.ai – Supervisor Console</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- HEADER -->
-  <header class="app-header">
-    <div class="logo-title">
-      <div class="logo-circle">HC</div>
-      <div>
-        <h1>HumanCore.ai</h1>
-        <p class="subtitle">Multi-Agent Supervisor • Demo UI</p>
-      </div>
-    </div>
+  <header>
+    <h1>HumanCore.ai</h1>
+    <p class="subtitle">Multi-Agent Supervisor • Demo UI</p>
   </header>
 
   <!-- NAVIGATION -->
   <nav class="navbar">
-    <button class="nav-btn active" data-target="dashboard">Dashboard</button>
+    <button class="nav-btn" data-target="dashboard">Dashboard</button>
     <button class="nav-btn" data-target="wizard">Wizard</button>
     <button class="nav-btn" data-target="workflows">Workflows</button>
     <button class="nav-btn" data-target="logs">Logs</button>
@@ -29,33 +25,35 @@
   </nav>
 
   <!-- MAIN CONTENT -->
-  <main class="app-main">
-
+  <main>
     <!-- ============ DASHBOARD ============ -->
     <section id="dashboard" class="page-section active">
       <h2>Dashboard</h2>
-      <p class="section-subtitle">Systemstatus, Auslastung und Überblick.</p>
+      <p>Systemstatus, Auslastung und Überblick.</p>
 
       <div class="card-grid">
         <div class="card">
           <h3>Supervisor</h3>
-          <p>Status: <span class="pill pill-green">bereit</span></p>
-          <p class="small-text">Demo-Modus: nur Entwürfe, keine Außenkommunikation.</p>
+          <p>Status: <span class="green">bereit</span></p>
         </div>
         <div class="card">
           <h3>Agenten</h3>
-          <p>8 Worker + 1 Supervisor (Konzept)</p>
-          <p class="small-text">Diese UI zeigt nur den Supervisor & Workflows.</p>
+          <p>8 Worker + 1 Supervisor aktiv</p>
         </div>
         <div class="card">
           <h3>Workflows</h3>
           <p id="wf-counter">Keine Workflows gestartet</p>
-          <p class="small-text">Neue Workflows entstehen über den Supervisor-Chat.</p>
         </div>
         <div class="card">
           <h3>System</h3>
-          <p>HumanCore 1.0 (Demo)</p>
-          <p class="small-text">Frontend-only, keine echten Daten, kein Backend.</p>
+          <p>HumanCore 1.1 (Demo – Worker-Simulation)</p>
+        </div>
+        <!-- NEU: Worker-Status-Karte -->
+        <div class="card">
+          <h3>Worker-Status</h3>
+          <ul id="worker-status-list">
+            <!-- Wird von app.js befüllt -->
+          </ul>
         </div>
       </div>
     </section>
@@ -63,35 +61,28 @@
     <!-- ============ WIZARD ============ -->
     <section id="wizard" class="page-section">
       <h2>Wizard</h2>
-      <p class="section-subtitle">Erzeuge eine einfache Demo-Konfiguration.</p>
+      <p>Erstelle eine einfache Demo-Konfiguration.</p>
 
-      <div class="wizard-box card">
-        <div class="form-row">
-          <label for="wiz-name">Profilname</label>
-          <input id="wiz-name" type="text" placeholder="z.B. 'Standard-Profil'" />
-        </div>
+      <div class="wizard-box">
+        <label>Profilname</label>
+        <input id="wiz-name" type="text" placeholder="Name des Profils" />
 
-        <div class="form-row">
-          <label for="wiz-autonomy">Autonomie-Level</label>
-          <select id="wiz-autonomy">
-            <option value="0">Level 0 – nur Vorschläge</option>
-            <option value="1">Level 1 – Entwürfe erstellen</option>
-            <option value="2">Level 2 – interne Routineaufgaben</option>
-          </select>
-        </div>
+        <label>Autonomie-Level</label>
+        <select id="wiz-autonomy">
+          <option value="0">Level 0 – Vorschläge</option>
+          <option value="1">Level 1 – Entwürfe</option>
+          <option value="2">Level 2 – interne Aufgaben</option>
+        </select>
 
-        <div class="form-row">
-          <label for="wiz-critical">Kritische Aktionen (Behörde/Finanzen)</label>
-          <select id="wiz-critical">
-            <option value="true">Immer manuelle Bestätigung erforderlich</option>
-            <option value="false">Demo: nur Hinweis, keine Sperre</option>
-          </select>
-        </div>
+        <label>Bestätigung kritischer Aktionen</label>
+        <select id="wiz-critical">
+          <option value="true">Ja – immer bestätigen</option>
+          <option value="false">Nein – Demo-Modus</option>
+        </select>
 
-        <button id="wiz-generate" class="primary-btn full-width">Konfiguration erzeugen</button>
+        <button id="wiz-generate" class="primary-btn">Konfiguration erzeugen</button>
 
-        <h3>Vorschau</h3>
-        <pre id="wiz-output" class="output-box">// Noch keine Konfiguration erzeugt.</pre>
+        <pre id="wiz-output" class="output-box"></pre>
       </div>
     </section>
 
@@ -104,7 +95,7 @@
 
       <div class="card workflow-card">
         <div id="workflow-empty" class="muted-text">
-          Noch keine Workflows. Starte einen über den Supervisor-Chat (SV) oder hänge eine Datei an.
+          Noch keine Workflows. Starte einen über den Supervisor-Chat (SV) oder den Wizard.
         </div>
 
         <div class="table-wrapper" id="workflow-table-wrapper" style="display:none;">
@@ -127,15 +118,20 @@
     <!-- ============ LOGS ============ -->
     <section id="logs" class="page-section">
       <h2>System-Logs</h2>
-      <p class="section-subtitle">Supervisor-Entscheidungen und Systemmeldungen.</p>
 
-      <div class="card">
+      <!-- Fallback-Liste -->
+      <div id="log-list" class="list-box">
+        <p>Keine Logs vorhanden.</p>
+      </div>
+
+      <!-- Optionale Tabellenansicht (wird von app.js genutzt, wenn vorhanden) -->
+      <div class="card" style="margin-top:1rem;">
         <div id="logs-empty" class="muted-text">
-          Noch keine Logs. Sobald der Supervisor arbeitet, erscheinen hier Einträge.
+          Noch keine Logs erfasst.
         </div>
 
         <div class="table-wrapper" id="logs-table-wrapper" style="display:none;">
-          <table class="logs-table">
+          <table class="workflow-table">
             <thead>
               <tr>
                 <th>Zeit</th>
@@ -144,7 +140,7 @@
                 <th>Nachricht</th>
               </tr>
             </thead>
-            <tbody id="logs-table-body"></tbody>
+              <tbody id="logs-table-body"></tbody>
           </table>
         </div>
       </div>
@@ -153,11 +149,7 @@
     <!-- ============ CONFIG ============ -->
     <section id="config" class="page-section">
       <h2>Konfiguration</h2>
-      <p class="section-subtitle">Aktuell aktive Wizard-Konfiguration (nur Demo, keine echte Speicherung).</p>
-
-      <div class="card">
-        <pre id="config-box" class="output-box">Noch keine Wizard-Konfiguration erstellt.</pre>
-      </div>
+      <pre id="config-box" class="output-box">Noch keine Wizard-Konfiguration erstellt.</pre>
     </section>
   </main>
 
@@ -169,8 +161,8 @@
     <div class="sv-header">
       <span>Supervisor</span>
       <div class="sv-tools">
-        <button id="sv-mute-btn" class="icon-btn">🔔</button>
-        <button id="sv-close-btn" class="icon-btn">✕</button>
+        <button id="sv-mute-btn">🔔</button>
+        <button id="sv-close-btn">✕</button>
       </div>
     </div>
 
@@ -181,7 +173,7 @@
     <div class="sv-input-box">
       <input id="sv-input" type="text" placeholder="Anweisung eingeben …" />
       <input id="sv-file-input" type="file" class="hidden" />
-      <button id="sv-file-btn" class="icon-btn">📎</button>
+      <button id="sv-file-btn" onclick="document.getElementById('sv-file-input').click()">📎</button>
       <button id="sv-send-btn" class="primary-btn">Senden</button>
     </div>
   </div>
@@ -190,7 +182,7 @@
   <div id="sv-popup" class="sv-popup hidden">
     <div id="sv-popup-content" class="sv-popup-content">
       <p id="sv-popup-text"></p>
-      <button id="sv-popup-close" class="primary-btn small-btn">OK</button>
+      <button id="sv-popup-close" class="primary-btn">OK</button>
     </div>
   </div>
 
