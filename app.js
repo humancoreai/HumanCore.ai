@@ -1,5 +1,5 @@
 // ============================================================================
-// HumanCore.ai – Frontend-Logik
+// HumanCore.ai – Frontend-Logik (UI-only Demo)
 // ============================================================================
 
 (function () {
@@ -9,11 +9,8 @@
   // Globale Datenstrukturen
   // ===========================
 
-  // Workflows (werden vom Supervisor / Wizard angelegt)
-  var hcWorkflows = window.hcWorkflows || [];
-
-  // Logs (Supervisor, System, später Worker)
-  var hcLogs = window.hcLogs || [];
+  var hcWorkflows = [];
+  var hcLogs = [];
 
   // ===========================
   // Logging
@@ -30,10 +27,8 @@
     };
 
     hcLogs.push(entry);
-    window.hcLogs = hcLogs.slice();
-
     if (typeof window.renderLogs === "function") {
-      window.renderLogs(window.hcLogs);
+      window.renderLogs(hcLogs);
     }
   }
 
@@ -45,32 +40,26 @@
     if (!extra) extra = {};
 
     var wf = {
-      id:
-        "wf-" +
-        Date.now() +
-        "-" +
-        Math.floor(Math.random() * 9999),
+      id: "wf-" + Date.now() + "-" + Math.floor(Math.random() * 9999),
       name: name || "Unbenannter Workflow",
       type: type || "generic",
-      zone: zone || "yellow", // red / yellow / green
-      status: "planned", // planned / running / waiting / done
-      origin: origin || "sv",
+      zone: zone || "yellow",
+      status: "planned",
+      origin: origin || "SV",
       meta: extra,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
     hcWorkflows.push(wf);
-    window.hcWorkflows = hcWorkflows.slice();
+    if (typeof window.renderWorkflows === "function") {
+      window.renderWorkflows(hcWorkflows);
+    }
 
     addLog("Supervisor", "workflow", "Workflow angelegt: " + wf.name, {
       workflowId: wf.id,
       zone: wf.zone
     });
-
-    if (typeof window.renderWorkflows === "function") {
-      window.renderWorkflows(window.hcWorkflows);
-    }
 
     return wf;
   }
@@ -84,11 +73,9 @@
     var empty = document.getElementById("workflow-empty");
     var wrapper = document.getElementById("workflow-table-wrapper");
     var badge = document.getElementById("workflow-count-badge");
+    var wfCounter = document.getElementById("wf-counter");
 
-    if (!tbody) {
-      // Workflows-UI nicht auf dieser Seite / noch nicht vorhanden
-      return;
-    }
+    if (!tbody) return;
 
     tbody.innerHTML = "";
 
@@ -98,10 +85,10 @@
       if (empty) empty.style.display = "block";
       if (wrapper) wrapper.style.display = "none";
       if (badge) badge.textContent = "0 Workflows";
+      if (wfCounter) wfCounter.textContent = "Keine Workflows gestartet";
       return;
     }
 
-    // Neueste zuerst
     list.sort(function (a, b) {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
@@ -109,12 +96,10 @@
     list.forEach(function (wf) {
       var tr = document.createElement("tr");
 
-      // Name
       var tdName = document.createElement("td");
       tdName.textContent = wf.name || "Unbenannter Workflow";
       tr.appendChild(tdName);
 
-      // Zone
       var tdZone = document.createElement("td");
       var zoneSpan = document.createElement("span");
       zoneSpan.classList.add("zone-pill");
@@ -132,7 +117,6 @@
       tdZone.appendChild(zoneSpan);
       tr.appendChild(tdZone);
 
-      // Status
       var tdStatus = document.createElement("td");
       var statusSpan = document.createElement("span");
       statusSpan.classList.add("status-pill");
@@ -149,20 +133,17 @@
       tdStatus.appendChild(statusSpan);
       tr.appendChild(tdStatus);
 
-      // Datum
       var tdDate = document.createElement("td");
       var created = wf.createdAt ? new Date(wf.createdAt) : null;
-      if (created && !isNaN(created)) {
-        tdDate.textContent = created.toLocaleString(undefined, {
-          dateStyle: "short",
-          timeStyle: "short"
-        });
-      } else {
-        tdDate.textContent = "–";
-      }
+      tdDate.textContent =
+        created && !isNaN(created)
+          ? created.toLocaleString(undefined, {
+              dateStyle: "short",
+              timeStyle: "short"
+            })
+          : "–";
       tr.appendChild(tdDate);
 
-      // Quelle
       var tdOrigin = document.createElement("td");
       tdOrigin.textContent = wf.origin || "SV";
       tr.appendChild(tdOrigin);
@@ -176,10 +157,19 @@
       var count = list.length;
       badge.textContent = count === 1 ? "1 Workflow" : count + " Workflows";
     }
+    if (wfCounter) {
+      var c = list.length;
+      wfCounter.textContent =
+        c === 0
+          ? "Keine Workflows gestartet"
+          : c === 1
+          ? "1 Workflow aktiv/geplant"
+          : c + " Workflows aktiv/geplant";
+    }
   };
 
   // ===========================
-  // (Optional) Logs-Rendering
+  // Logs-Rendering
   // ===========================
 
   window.renderLogs = function (logs) {
@@ -208,7 +198,8 @@
 
       var tdTime = document.createElement("td");
       var t = log.createdAt ? new Date(log.createdAt) : null;
-      tdTime.textContent = t && !isNaN(t) ? t.toLocaleTimeString() : "–";
+      tdTime.textContent =
+        t && !isNaN(t) ? t.toLocaleTimeString(undefined, { timeStyle: "short" }) : "–";
       tr.appendChild(tdTime);
 
       var tdSource = document.createElement("td");
@@ -230,380 +221,354 @@
     if (wrapper) wrapper.style.display = "block";
   };
 
-   // ===========================
-  // Navigation-Shortcuts (Scroll zu Bereichen)
   // ===========================
+  // DOM-Setup
+  // ===========================
+
   document.addEventListener("DOMContentLoaded", function () {
-  var navButtons = document.querySelectorAll(".nav-btn");
-  var sections = document.querySelectorAll(".page-section");
+    // ---------- Tabs / Navigation ----------
+    var navButtons = document.querySelectorAll(".nav-btn");
+    var sections = document.querySelectorAll(".page-section");
 
-  function activateSection(id) {
-    sections.forEach(function (sec) {
-      if (sec.id === id) {
-        sec.classList.add("active");
-      } else {
-        sec.classList.remove("active");
-      }
-    });
-  }
-
-  // ===========================
-// Seiten-Navigation (Tabs)
-// ===========================
-
-  navButtons.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var target = btn.getAttribute("data-target");
-      if (target) {
-        activateSection(target);
-      }
-    });
-  });
-
-  // Standard-Startseite
-  activateSection("dashboard");
-});
-
-    // Workflows & Logs initial zeichnen (falls Tabellen da sind)
-    if (typeof window.renderWorkflows === "function") {
-      try {
-        window.renderWorkflows(window.hcWorkflows || hcWorkflows || []);
-      } catch (e) {}
-    }
-    if (typeof window.renderLogs === "function") {
-      try {
-        window.renderLogs(window.hcLogs || hcLogs || []);
-      } catch (e) {}
-    }
-
-    // Map: Button-Text -> Überschrift-Text
-    var targetsMap = {
-      Dashboard: "Dashboard",
-      Wizard: "Wizard",
-      Workflows: "Workflows",
-      Logs: "System-Logs",
-      Konfiguration: "Konfiguration"
-    };
-
-    // Alle H2-Überschriften einsammeln
-    var sectionByTitle = {};
-    var headings = document.querySelectorAll("h2");
-    headings.forEach(function (h2) {
-      var t = (h2.textContent || "").trim();
-      if (t) {
-        sectionByTitle[t] = h2;
-      }
-    });
-
-    // Kandidaten für die Navigation: Buttons / Links / Spans
-    var navCandidates = document.querySelectorAll("button, a, span");
-    navCandidates.forEach(function (el) {
-      var label = (el.textContent || "").trim();
-      if (!targetsMap[label]) return;
-
-      el.style.cursor = "pointer";
-
-      el.addEventListener("click", function (e) {
-        var targetTitle = targetsMap[label];
-        var targetHeading = sectionByTitle[targetTitle];
-        if (targetHeading && typeof targetHeading.scrollIntoView === "function") {
-          e.preventDefault();
-          targetHeading.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-          });
+    function activateSection(id) {
+      sections.forEach(function (sec) {
+        if (sec.id === id) {
+          sec.classList.add("active");
+        } else {
+          sec.classList.remove("active");
         }
       });
-    });
-  });
 
-  // ===========================
-  // Supervisor Chat & Popup
-  // ===========================
-
-  var svToggleBtn = document.getElementById("sv-toggle-btn");
-  var svPanel = document.getElementById("sv-chat-panel");
-  var svCloseBtn = document.getElementById("sv-close-btn");
-  var svMuteBtn = document.getElementById("sv-mute-btn");
-  var svBody = document.getElementById("sv-chat-body");
-  var svAttachmentInfo = document.getElementById("sv-attachment-info");
-  var svInput = document.getElementById("sv-input");
-  var svSendBtn = document.getElementById("sv-send-btn");
-  var svFileInput = document.getElementById("sv-file-input");
-
-  var svPopup = document.getElementById("sv-popup");
-  var svPopupContent = document.getElementById("sv-popup-content");
-  var svPopupText = document.getElementById("sv-popup-text");
-  var svPopupClose = document.getElementById("sv-popup-close");
-
-  var svMessages = [];
-  var svMuted = false;
-  var svAttachedFile = null;
-
-  function toggleSvPanel(forceOpen) {
-    if (!svPanel || !svToggleBtn) return;
-    var isHidden = svPanel.classList.contains("hidden");
-    var shouldOpen = forceOpen ? true : isHidden;
-    if (shouldOpen) {
-      svPanel.classList.remove("hidden");
-      svToggleBtn.classList.add("sv-open");
-    } else {
-      svPanel.classList.add("hidden");
-      svToggleBtn.classList.remove("sv-open");
-    }
-  }
-
-  function playAlarm() {
-    if (svMuted) return;
-    try {
-      var Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      var ctx = new Ctx();
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.12);
-    } catch (e) {
-      // ignorieren
-    }
-  }
-
-  function renderSvMessages() {
-    if (!svBody) return;
-    svBody.innerHTML = "";
-    for (var i = 0; i < svMessages.length; i++) {
-      var msg = svMessages[i];
-      var div = document.createElement("div");
-      div.classList.add("sv-msg");
-      if (msg.from === "user") {
-        div.classList.add("sv-msg-user");
-      } else {
-        div.classList.add("sv-msg-sv");
-        if (msg.severity === "success") {
-          div.classList.add("sv-msg-sv-success");
-        } else if (msg.severity === "ask") {
-          div.classList.add("sv-msg-sv-ask");
-        } else if (msg.severity === "alarm") {
-          div.classList.add("sv-msg-sv-alarm");
+      navButtons.forEach(function (btn) {
+        var target = btn.getAttribute("data-target");
+        if (target === id) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
         }
-      }
-      div.textContent = msg.text;
-      svBody.appendChild(div);
-    }
-    svBody.scrollTop = svBody.scrollHeight;
-  }
-
-  function svAddLog(source, type, message, context) {
-    addLog(source, type, message, context || {});
-  }
-
-  function svShowPopup(severity, text) {
-    if (!svPopup || !svPopupContent || !svPopupText) return;
-    svPopupText.textContent = text;
-    svPopupContent.classList.remove("success", "ask", "alarm");
-    if (severity === "success") {
-      svPopupContent.classList.add("success");
-    } else if (severity === "ask") {
-      svPopupContent.classList.add("ask");
-    } else if (severity === "alarm") {
-      svPopupContent.classList.add("alarm");
-    }
-    svPopup.classList.remove("hidden");
-
-    if (severity === "success") {
-      setTimeout(function () {
-        svPopup.classList.add("hidden");
-      }, 3000);
+      });
     }
 
-    if (severity === "alarm") {
-      playAlarm();
-      toggleSvPanel(true);
-    }
-  }
-
-  function svNotify(severity, text, options) {
-    if (!options) options = {};
-    var source = options.source || "Supervisor";
-    var logType = options.logType || "info";
-    var popup = !!options.popup;
-
-    svMessages.push({
-      from: "sv",
-      text: text,
-      severity: severity,
-      timestamp: new Date().toISOString()
+    navButtons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var target = btn.getAttribute("data-target");
+        if (target) activateSection(target);
+      });
     });
-    renderSvMessages();
-    svAddLog(source, logType, text);
-    if (popup) svShowPopup(severity, text);
-  }
 
-  function handleSvUserInput() {
-    if (!svInput) return;
-    var raw = svInput.value ? svInput.value.trim() : "";
-    if (!raw && !svAttachedFile) return;
+    activateSection("dashboard");
 
-    if (raw) {
+    // ---------- Wizard ----------
+    var wizName = document.getElementById("wiz-name");
+    var wizAutonomy = document.getElementById("wiz-autonomy");
+    var wizCritical = document.getElementById("wiz-critical");
+    var wizGenerate = document.getElementById("wiz-generate");
+    var wizOutput = document.getElementById("wiz-output");
+    var configBox = document.getElementById("config-box");
+
+    if (wizGenerate && wizOutput && configBox) {
+      wizGenerate.addEventListener("click", function () {
+        var profileName = (wizName && wizName.value.trim()) || "Standard-Profil";
+        var autonomy = wizAutonomy ? wizAutonomy.value : "0";
+        var critical = wizCritical ? wizCritical.value === "true" : true;
+
+        var cfg = {
+          profileName: profileName,
+          autonomyLevel: Number(autonomy),
+          confirmCriticalActions: critical,
+          createdAt: new Date().toISOString(),
+          notes:
+            "Demo-Konfiguration. Keine echten Schreibrechte, nur Entwurfs-/Simulationslogik."
+        };
+
+        var json = JSON.stringify(cfg, null, 2);
+        wizOutput.textContent = json;
+        configBox.textContent = json;
+
+        addLog("Wizard", "config", "Neue Demo-Konfiguration erzeugt.", {
+          profileName: profileName,
+          autonomyLevel: autonomy
+        });
+      });
+    }
+
+    // ---------- Supervisor Chat ----------
+    var svToggleBtn = document.getElementById("sv-toggle-btn");
+    var svPanel = document.getElementById("sv-chat-panel");
+    var svCloseBtn = document.getElementById("sv-close-btn");
+    var svMuteBtn = document.getElementById("sv-mute-btn");
+    var svBody = document.getElementById("sv-chat-body");
+    var svAttachmentInfo = document.getElementById("sv-attachment-info");
+    var svInput = document.getElementById("sv-input");
+    var svSendBtn = document.getElementById("sv-send-btn");
+    var svFileInput = document.getElementById("sv-file-input");
+    var svFileBtn = document.getElementById("sv-file-btn");
+
+    var svPopup = document.getElementById("sv-popup");
+    var svPopupContent = document.getElementById("sv-popup-content");
+    var svPopupText = document.getElementById("sv-popup-text");
+    var svPopupClose = document.getElementById("sv-popup-close");
+
+    var svMessages = [];
+    var svMuted = false;
+    var svAttachedFile = null;
+
+    function toggleSvPanel(forceOpen) {
+      if (!svPanel || !svToggleBtn) return;
+      var isHidden = svPanel.classList.contains("hidden");
+      var shouldOpen = forceOpen ? true : isHidden;
+      if (shouldOpen) {
+        svPanel.classList.remove("hidden");
+      } else {
+        svPanel.classList.add("hidden");
+      }
+    }
+
+    function playAlarm() {
+      if (svMuted) return;
+      try {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        var ctx = new Ctx();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      } catch (e) {
+        // ignorieren
+      }
+    }
+
+    function renderSvMessages() {
+      if (!svBody) return;
+      svBody.innerHTML = "";
+      svMessages.forEach(function (msg) {
+        var div = document.createElement("div");
+        div.classList.add("sv-msg");
+        if (msg.from === "user") {
+          div.classList.add("sv-msg-user");
+        } else {
+          div.classList.add("sv-msg-sv");
+          if (msg.severity === "success") {
+            div.classList.add("sv-msg-sv-success");
+          } else if (msg.severity === "ask") {
+            div.classList.add("sv-msg-sv-ask");
+          } else if (msg.severity === "alarm") {
+            div.classList.add("sv-msg-sv-alarm");
+          }
+        }
+        div.textContent = msg.text;
+        svBody.appendChild(div);
+      });
+      svBody.scrollTop = svBody.scrollHeight;
+    }
+
+    function svShowPopup(severity, text) {
+      if (!svPopup || !svPopupContent || !svPopupText) return;
+      svPopupText.textContent = text;
+      svPopupContent.className = "sv-popup-content";
+      if (severity === "success") {
+        // optional: extra Styling
+      } else if (severity === "ask") {
+        // optional
+      } else if (severity === "alarm") {
+        // optional
+      }
+      svPopup.classList.remove("hidden");
+
+      if (severity === "success") {
+        setTimeout(function () {
+          svPopup.classList.add("hidden");
+        }, 3000);
+      }
+
+      if (severity === "alarm") {
+        playAlarm();
+        toggleSvPanel(true);
+      }
+    }
+
+    function svNotify(severity, text, options) {
+      if (!options) options = {};
+      var source = options.source || "Supervisor";
+      var logType = options.logType || "info";
+      var popup = !!options.popup;
+
       svMessages.push({
-        from: "user",
-        text: raw,
-        severity: "normal",
+        from: "sv",
+        text: text,
+        severity: severity,
         timestamp: new Date().toISOString()
       });
       renderSvMessages();
+      addLog(source, logType, text, options.context || {});
+      if (popup) svShowPopup(severity, text);
     }
 
-    var cmd = raw.toLowerCase();
+    function handleSvUserInput() {
+      if (!svInput) return;
+      var raw = svInput.value ? svInput.value.trim() : "";
+      if (!raw && !svAttachedFile) return;
 
-    if (svAttachedFile) {
-      var file = svAttachedFile;
-      svAttachedFile = null;
-      if (svAttachmentInfo) {
-        svAttachmentInfo.classList.add("hidden");
-        svAttachmentInfo.textContent = "";
+      if (raw) {
+        svMessages.push({
+          from: "user",
+          text: raw,
+          severity: "normal",
+          timestamp: new Date().toISOString()
+        });
+        renderSvMessages();
       }
 
-      var wfName = "Dokument: " + file.name;
-      addWorkflow(wfName, "document", "yellow", "sv-chat", {
-        fileName: file.name
+      var cmd = raw.toLowerCase();
+
+      if (svAttachedFile) {
+        var file = svAttachedFile;
+        svAttachedFile = null;
+        if (svAttachmentInfo) {
+          svAttachmentInfo.classList.add("hidden");
+          svAttachmentInfo.textContent = "";
+        }
+
+        var wfName = "Dokument: " + file.name;
+        addWorkflow(wfName, "document", "yellow", "SV (Datei)", {
+          fileName: file.name
+        });
+
+        svNotify(
+          "success",
+          "Dokument „" +
+            file.name +
+            "“ übernommen. Entwurfs-Workflow „" +
+            wfName +
+            "“ wurde angelegt (Zone: gelb).",
+          { popup: true, logType: "decision" }
+        );
+      } else if (cmd.indexOf("workflow") !== -1 || cmd.indexOf("bericht") !== -1) {
+        var nameMatch = raw.match(/["“](.+?)["”]/);
+        var wfName2 = nameMatch ? nameMatch[1] : "Allgemeiner Workflow";
+        addWorkflow(wfName2, "generic", "yellow", "SV (Chat)");
+        svNotify(
+          "success",
+          "Workflow „" +
+            wfName2 +
+            "“ als Entwurf angelegt (Zone: gelb). Bitte prüfen, bevor etwas extern verwendet wird.",
+          { popup: true, logType: "decision" }
+        );
+      } else if (cmd.indexOf("behörde") !== -1 || cmd.indexOf("finanz") !== -1) {
+        svNotify(
+          "alarm",
+          "Kritische Aktion erkannt (Behörde/Finanzen). HumanCore 1.0 arbeitet nur im Entwurfsmodus – keine direkte Außenkommunikation.",
+          { popup: true, logType: "warning" }
+        );
+      } else if (cmd.indexOf("auslastung") !== -1 || cmd.indexOf("last") !== -1) {
+        var load = 35 + Math.floor(Math.random() * 25);
+        svNotify(
+          "success",
+          "Aktuelle geschätzte Supervisor-Auslastung: " +
+            load +
+            " %. Alle Worker innerhalb des sicheren Bereichs.",
+          { popup: false, logType: "info" }
+        );
+      } else if (cmd.indexOf("hilfe") !== -1 || cmd.indexOf("help") !== -1) {
+        svNotify(
+          "ask",
+          "Du kannst z.B. sagen: „Starte Workflow „Kundenbericht““, „Wie ist die aktuelle Auslastung?“, oder eine Datei anhängen, die als Entwurf-Workflow übernommen wird.",
+          { popup: false, logType: "info" }
+        );
+      } else if (cmd.indexOf("reset") !== -1 || cmd.indexOf("zurücksetzen") !== -1) {
+        svMessages = [];
+        renderSvMessages();
+        svNotify(
+          "success",
+          "Supervisor-Chatverlauf lokal zurückgesetzt (Demo-Modus, keine echten Daten).",
+          { popup: false, logType: "info" }
+        );
+      } else if (cmd) {
+        svNotify(
+          "ask",
+          "Unklarer Auftrag. Bitte konkreter formulieren oder das Wort „Workflow“, „Bericht“, „Auslastung“ oder „Behörde/Finanzen“ verwenden.",
+          { popup: false, logType: "warning" }
+        );
+      }
+
+      svInput.value = "";
+    }
+
+    // Events Supervisor
+    if (svToggleBtn) {
+      svToggleBtn.addEventListener("click", function () {
+        toggleSvPanel();
       });
-
-      svNotify(
-        "success",
-        "Dokument „" +
-          file.name +
-          "“ übernommen. Entwurfs-Workflow „" +
-          wfName +
-          "“ wurde angelegt (Zone: gelb).",
-        { popup: true, logType: "decision" }
-      );
-    } else if (
-      cmd.indexOf("workflow") !== -1 ||
-      cmd.indexOf("bericht") !== -1
-    ) {
-      var nameMatch = raw.match(/["“](.+?)["”]/);
-      var wfName2 = nameMatch ? nameMatch[1] : "Allgemeiner Workflow";
-      addWorkflow(wfName2, "generic", "yellow", "sv-chat");
-      svNotify(
-        "success",
-        "Workflow „" +
-          wfName2 +
-          "“ als Entwurf angelegt (Zone: gelb). Bitte prüfen, bevor etwas extern verwendet wird.",
-        { popup: true, logType: "decision" }
-      );
-    } else if (
-      cmd.indexOf("behörde") !== -1 ||
-      cmd.indexOf("finanz") !== -1
-    ) {
-      svNotify(
-        "alarm",
-        "Kritische Aktion erkannt (Behörde/Finanzen). HumanCore 1.0 arbeitet nur im Entwurfsmodus – keine direkte Außenkommunikation.",
-        { popup: true, logType: "warning" }
-      );
-    } else if (
-      cmd.indexOf("auslastung") !== -1 ||
-      cmd.indexOf("last") !== -1
-    ) {
-      var load = 35 + Math.floor(Math.random() * 25);
-      svNotify(
-        "success",
-        "Aktuelle geschätzte Supervisor-Auslastung: " +
-          load +
-          " %. Alle Worker innerhalb des sicheren Bereichs.",
-        { popup: false, logType: "info" }
-      );
-    } else if (cmd.indexOf("hilfe") !== -1 || cmd.indexOf("help") !== -1) {
-      svNotify(
-        "ask",
-        "Du kannst z.B. sagen: „Starte Workflow „Kundenbericht““, „Wie ist die aktuelle Auslastung?“, oder eine Datei anhängen, die als Entwurf-Workflow übernommen wird.",
-        { popup: false, logType: "info" }
-      );
-    } else if (
-      cmd.indexOf("reset") !== -1 ||
-      cmd.indexOf("zurücksetzen") !== -1
-    ) {
-      svMessages = [];
-      renderSvMessages();
-      svNotify(
-        "success",
-        "Supervisor-Chatverlauf lokal zurückgesetzt (Demo-Modus, keine echten Daten).",
-        { popup: false, logType: "info" }
-      );
-    } else if (cmd) {
-      svNotify(
-        "ask",
-        "Unklarer Auftrag. Bitte konkreter formulieren oder das Wort „Workflow“, „Bericht“, „Auslastung“ oder „Behörde/Finanzen“ verwenden.",
-        { popup: false, logType: "warning" }
-      );
     }
 
-    svInput.value = "";
-  }
+    if (svCloseBtn) {
+      svCloseBtn.addEventListener("click", function () {
+        toggleSvPanel(false);
+      });
+    }
 
-  // Events Supervisor
-  if (svToggleBtn) {
-    svToggleBtn.addEventListener("click", function () {
-      toggleSvPanel();
-    });
-  }
+    if (svMuteBtn) {
+      svMuteBtn.addEventListener("click", function () {
+        svMuted = !svMuted;
+        svMuteBtn.textContent = svMuted ? "🔕" : "🔔";
+      });
+    }
 
-  if (svCloseBtn) {
-    svCloseBtn.addEventListener("click", function () {
-      toggleSvPanel(false);
-    });
-  }
+    if (svSendBtn) {
+      svSendBtn.addEventListener("click", handleSvUserInput);
+    }
 
-  if (svMuteBtn) {
-    svMuteBtn.addEventListener("click", function () {
-      svMuted = !svMuted;
-      svMuteBtn.textContent = svMuted ? "🔕" : "🔔";
-    });
-  }
+    if (svInput) {
+      svInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleSvUserInput();
+        }
+      });
+    }
 
-  if (svSendBtn) {
-    svSendBtn.addEventListener("click", handleSvUserInput);
-  }
+    if (svFileBtn && svFileInput) {
+      svFileBtn.addEventListener("click", function () {
+        svFileInput.click();
+      });
+    }
 
-  if (svInput) {
-    svInput.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleSvUserInput();
-      }
-    });
-  }
+    if (svFileInput) {
+      svFileInput.addEventListener("change", function (e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        svAttachedFile = file;
+        if (svAttachmentInfo) {
+          svAttachmentInfo.textContent =
+            "Angehängte Datei: " +
+            file.name +
+            " (Demo – es wird kein echter Upload durchgeführt)";
+          svAttachmentInfo.classList.remove("hidden");
+        }
+        svNotify(
+          "success",
+          "Datei „" +
+            file.name +
+            "“ beim Supervisor vorgemerkt. Sende jetzt einen Auftrag, z.B. „Entwurf für diesen Antrag vorbereiten“. ",
+          { popup: false, logType: "info" }
+        );
+      });
+    }
 
-  if (svFileInput) {
-    svFileInput.addEventListener("change", function (e) {
-      var file = e.target.files[0];
-      if (!file) return;
-      svAttachedFile = file;
-      if (svAttachmentInfo) {
-        svAttachmentInfo.textContent =
-          "Angehängte Datei: " +
-          file.name +
-          " (Demo – es wird kein echter Upload durchgeführt)";
-        svAttachmentInfo.classList.remove("hidden");
-      }
-      svNotify(
-        "success",
-        "Datei „" +
-          file.name +
-          "“ beim Supervisor vorgemerkt. Sende jetzt einen Auftrag, z.B. „Entwurf für diesen Antrag vorbereiten“. ",
-        { popup: false, logType: "info" }
-      );
-    });
-  }
+    if (svPopupClose && svPopup) {
+      svPopupClose.addEventListener("click", function () {
+        svPopup.classList.add("hidden");
+      });
+    }
 
-  if (svPopupClose && svPopup) {
-    svPopupClose.addEventListener("click", function () {
-      svPopup.classList.add("hidden");
-    });
-  }
+    // Initiales Rendern
+    window.renderWorkflows(hcWorkflows);
+    window.renderLogs(hcLogs);
+  });
 })();
