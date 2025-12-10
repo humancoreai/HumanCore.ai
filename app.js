@@ -1,5 +1,5 @@
 // ============================================================================
-// HumanCore.ai – Frontend-Logik (stabile Demo-Version)
+// HumanCore.ai – Frontend-Logik (Version 1.1 mit Worker-Simulation B1)
 // ============================================================================
 
 (function () {
@@ -11,6 +11,91 @@
 
   var hcWorkflows = [];
   var hcLogs = [];
+
+  // B1: Worker-Grundmodell
+  var hcWorkers = [
+    {
+      id: "worker-writer",
+      name: "Writer",
+      role: "writer",
+      status: "idle",
+      currentTaskId: null,
+      queue: [],
+      taskStartedAt: null,
+      taskDurationMs: 0
+    },
+    {
+      id: "worker-planner",
+      name: "Planner",
+      role: "planner",
+      status: "idle",
+      currentTaskId: null,
+      queue: [],
+      taskStartedAt: null,
+      taskDurationMs: 0
+    },
+    {
+      id: "worker-data",
+      name: "Data",
+      role: "data",
+      status: "idle",
+      currentTaskId: null,
+      queue: [],
+      taskStartedAt: null,
+      taskDurationMs: 0
+    },
+    {
+      id: "worker-research",
+      name: "Research",
+      role: "research",
+      status: "idle",
+      currentTaskId: null,
+      queue: [],
+      taskStartedAt: null,
+      taskDurationMs: 0
+    },
+    {
+      id: "worker-support",
+      name: "Support",
+      role: "support",
+      status: "idle",
+      currentTaskId: null,
+      queue: [],
+      taskStartedAt: null,
+      taskDurationMs: 0
+    },
+    {
+      id: "worker-workflow",
+      name: "Workflow",
+      role: "workflow",
+      status: "idle",
+      currentTaskId: null,
+      queue: [],
+      taskStartedAt: null,
+      taskDurationMs: 0
+    },
+    {
+      id: "worker-creative",
+      name: "Creative",
+      role: "creative",
+      status: "idle",
+      currentTaskId: null,
+      queue: [],
+      taskStartedAt: null,
+      taskDurationMs: 0
+    },
+    {
+      id: "worker-tech",
+      name: "Tech",
+      role: "tech",
+      status: "idle",
+      currentTaskId: null,
+      queue: [],
+      taskStartedAt: null,
+      taskDurationMs: 0
+    }
+    // Supervisor ist hier bewusst nicht als Worker modelliert
+  ];
 
   // ===========================
   // Logging
@@ -27,29 +112,27 @@
     };
 
     hcLogs.push(entry);
-
-    // Für evtl. spätere Nutzung im globalen Scope
     window.hcLogs = hcLogs.slice();
 
     renderLogs();
   }
 
   function renderLogs() {
-    // Variante 1: Tabellen-Ansicht (neue UI)
     var tbody = document.getElementById("logs-table-body");
     var wrapper = document.getElementById("logs-table-wrapper");
     var empty = document.getElementById("logs-empty");
-
-    // Variante 2: einfache Liste (ältere Struktur)
     var listDiv = document.getElementById("log-list");
 
-    var list = hcLogs.slice().sort(function (a, b) {
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    });
+    var list = hcLogs
+      .slice()
+      .sort(function (a, b) {
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
 
-    // Tabellenvariante, falls vorhanden
+    // Tabellenansicht
     if (tbody) {
       tbody.innerHTML = "";
+
       if (list.length === 0) {
         if (empty) empty.style.display = "block";
         if (wrapper) wrapper.style.display = "none";
@@ -82,7 +165,7 @@
       }
     }
 
-    // Einfacher Fallback (z.B. <div id="log-list">…</div>)
+    // Fallback-Liste
     if (listDiv) {
       if (list.length === 0) {
         listDiv.innerHTML = "<p>Keine Logs vorhanden.</p>";
@@ -124,12 +207,13 @@
         Math.floor(Math.random() * 9999),
       name: name || "Unbenannter Workflow",
       type: type || "generic",
-      zone: (zone || "yellow").toLowerCase(), // red / yellow / green
-      status: "planned", // planned / running / waiting / done
+      zone: (zone || "yellow").toLowerCase(),
+      status: "planned",
       origin: origin || "SV",
       meta: extra,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      assignedWorkerId: null
     };
 
     hcWorkflows.push(wf);
@@ -140,8 +224,19 @@
       zone: wf.zone
     });
 
+    // B1: Worker-Zuweisung (einfache Simulation)
+    autoAssignWorkflowToWorker(wf);
+
     renderWorkflows();
+    renderWorkers();
     return wf;
+  }
+
+  function getWorkflowById(id) {
+    for (var i = 0; i < hcWorkflows.length; i++) {
+      if (hcWorkflows[i].id === id) return hcWorkflows[i];
+    }
+    return null;
   }
 
   function renderWorkflows() {
@@ -151,10 +246,7 @@
     var badge = document.getElementById("workflow-count-badge");
     var counter = document.getElementById("wf-counter");
 
-    if (!tbody) {
-      // UI für Workflows nicht vorhanden -> nichts tun
-      return;
-    }
+    if (!tbody) return;
 
     tbody.innerHTML = "";
 
@@ -208,6 +300,10 @@
         statusSpan.textContent = "Wartet";
       } else if (status === "done") {
         statusSpan.textContent = "Fertig";
+      } else if (status === "failed") {
+        statusSpan.textContent = "Fehlgeschlagen";
+      } else if (status === "cancelled") {
+        statusSpan.textContent = "Abgebrochen";
       } else {
         statusSpan.textContent = "Geplant";
       }
@@ -250,13 +346,183 @@
   }
 
   // ===========================
+  // B1: Worker-Simulation
+  // ===========================
+
+  function chooseWorkerRoleForWorkflow(wf) {
+    var t = (wf.type || "").toLowerCase();
+
+    if (t === "document") return "writer";
+    if (t === "data") return "data";
+    if (t === "research") return "research";
+    if (t === "creative") return "creative";
+
+    // generische Workflows → Planner / Workflow
+    return "workflow";
+  }
+
+  function autoAssignWorkflowToWorker(wf) {
+    var role = chooseWorkerRoleForWorkflow(wf);
+
+    // 1. passenden, idle Worker suchen
+    var candidate = null;
+    for (var i = 0; i < hcWorkers.length; i++) {
+      var w = hcWorkers[i];
+      if (w.role === role && w.status === "idle" && !w.currentTaskId) {
+        candidate = w;
+        break;
+      }
+    }
+
+    // 2. Fallback: irgendeinen Worker der Rolle nehmen
+    if (!candidate) {
+      for (var j = 0; j < hcWorkers.length; j++) {
+        var w2 = hcWorkers[j];
+        if (w2.role === role) {
+          candidate = w2;
+          break;
+        }
+      }
+    }
+
+    // Wenn immer noch kein Worker → nicht zuweisen (Demo-Sicherheit)
+    if (!candidate) {
+      addLog(
+        "Supervisor",
+        "info",
+        "Kein geeigneter Worker für Workflow „" + wf.name + "“ gefunden."
+      );
+      return;
+    }
+
+    // Workflow in Worker-Queue legen
+    candidate.queue.push(wf.id);
+    wf.assignedWorkerId = candidate.id;
+    wf.status = "queued";
+    wf.updatedAt = new Date().toISOString();
+
+    addLog(
+      "Supervisor",
+      "info",
+      "Workflow „" + wf.name + "“ Worker „" + candidate.name + "“ zugewiesen.",
+      { workflowId: wf.id, workerId: candidate.id }
+    );
+
+    // Falls Worker idle → sofort starten
+    if (candidate.status === "idle" && !candidate.currentTaskId) {
+      startWorkerTask(candidate);
+    }
+  }
+
+  function startWorkerTask(worker) {
+    if (worker.queue.length === 0) return;
+
+    var wfId = worker.queue.shift();
+    var wf = getWorkflowById(wfId);
+    if (!wf) return;
+
+    worker.currentTaskId = wf.id;
+    worker.status = "busy";
+    worker.taskStartedAt = Date.now();
+    // Simulierte Bearbeitungszeit: 3–7 Sekunden
+    worker.taskDurationMs = 3000 + Math.floor(Math.random() * 4000);
+
+    wf.status = "running";
+    wf.updatedAt = new Date().toISOString();
+
+    addLog(
+      "Worker:" + worker.name,
+      "info",
+      "Workflow „" + wf.name + "“ in Bearbeitung.",
+      { workflowId: wf.id }
+    );
+  }
+
+  function completeWorkerTask(worker) {
+    var wf = worker.currentTaskId ? getWorkflowById(worker.currentTaskId) : null;
+    if (wf) {
+      wf.status = "done";
+      wf.updatedAt = new Date().toISOString();
+      addLog(
+        "Worker:" + worker.name,
+        "info",
+        "Workflow „" + wf.name + "“ abgeschlossen.",
+        { workflowId: wf.id }
+      );
+    }
+    worker.currentTaskId = null;
+    worker.taskStartedAt = null;
+    worker.taskDurationMs = 0;
+    worker.status = "idle";
+  }
+
+  function workerTick() {
+    var now = Date.now();
+
+    // 1. Laufende Tasks prüfen
+    hcWorkers.forEach(function (w) {
+      if (w.status === "busy" && w.currentTaskId && w.taskStartedAt != null) {
+        var elapsed = now - w.taskStartedAt;
+        if (elapsed >= w.taskDurationMs) {
+          // Task abschließen
+          completeWorkerTask(w);
+          // evtl. nächsten Task starten
+          if (w.queue.length > 0) {
+            startWorkerTask(w);
+          }
+        }
+      } else if (w.status === "idle" && !w.currentTaskId && w.queue.length > 0) {
+        // Worker hat noch Aufgaben in der Queue, aber keine aktive → starten
+        startWorkerTask(w);
+      }
+    });
+
+    renderWorkflows();
+    renderWorkers();
+  }
+
+  function renderWorkers() {
+    var listEl = document.getElementById("worker-status-list");
+    if (!listEl) return;
+
+    listEl.innerHTML = "";
+
+    hcWorkers.forEach(function (w) {
+      var li = document.createElement("li");
+      var statusLabel = "";
+      var statusText = (w.status || "idle").toLowerCase();
+
+      if (statusText === "busy") {
+        statusLabel = "🟡 beschäftigt";
+      } else if (statusText === "idle") {
+        statusLabel = "🟢 bereit";
+      } else if (statusText === "offline") {
+        statusLabel = "🔴 offline";
+      } else {
+        statusLabel = statusText;
+      }
+
+      var currentInfo = "";
+      if (w.currentTaskId) {
+        var wf = getWorkflowById(w.currentTaskId);
+        if (wf) {
+          currentInfo = " – „" + wf.name + "“";
+        }
+      } else if (w.queue.length > 0) {
+        currentInfo = " – Warteschlange: " + w.queue.length;
+      }
+
+      li.textContent = w.name + ": " + statusLabel + currentInfo;
+      listEl.appendChild(li);
+    });
+  }
+
+  // ===========================
   // DOM-Setup nach Laden
   // ===========================
 
   document.addEventListener("DOMContentLoaded", function () {
-    // ---------------------------
     // Navigation (Tabs)
-    // ---------------------------
     var navButtons = document.querySelectorAll(".nav-btn");
     var sections = document.querySelectorAll(".page-section");
 
@@ -289,12 +555,9 @@
       });
     });
 
-    // Default: Dashboard anzeigen
     showSection("dashboard");
 
-    // ---------------------------
     // Wizard
-    // ---------------------------
     var wizName = document.getElementById("wiz-name");
     var wizAutonomy = document.getElementById("wiz-autonomy");
     var wizCritical = document.getElementById("wiz-critical");
@@ -331,10 +594,7 @@
       });
     }
 
-    // ---------------------------
     // Supervisor Chat & Popup
-    // ---------------------------
-
     var svToggleBtn = document.getElementById("sv-toggle-btn");
     var svPanel = document.getElementById("sv-chat-panel");
     var svCloseBtn = document.getElementById("sv-close-btn");
@@ -383,7 +643,7 @@
         osc.start();
         osc.stop(ctx.currentTime + 0.12);
       } catch (e) {
-        // Ignorieren – Sound ist nur Bonus.
+        // Sound ist optional
       }
     }
 
@@ -513,19 +773,22 @@
       ) {
         svNotify(
           "alarm",
-          "Kritische Aktion erkannt (Behörde/Finanzen). HumanCore 1.0 arbeitet nur im Entwurfsmodus – keine direkte Außenkommunikation.",
+          "Kritische Aktion erkannt (Behörde/Finanzen). HumanCore 1.1 arbeitet nur im Entwurfsmodus – keine direkte Außenkommunikation.",
           { popup: true, logType: "warning" }
         );
       } else if (
         cmd.indexOf("auslastung") !== -1 ||
         cmd.indexOf("last") !== -1
       ) {
-        var load = 35 + Math.floor(Math.random() * 25);
+        var busyCount = hcWorkers.filter(function (w) {
+          return w.status === "busy";
+        }).length;
+        var load = Math.round((busyCount / hcWorkers.length) * 100);
         svNotify(
           "success",
-          "Aktuelle geschätzte Supervisor-Auslastung: " +
+          "Aktuelle geschätzte Supervisor-/Worker-Auslastung: " +
             load +
-            " %. Alle Worker innerhalb des sicheren Bereichs.",
+            " %. (Demo-Simulation)",
           { popup: false, logType: "info" }
         );
       } else if (cmd.indexOf("hilfe") !== -1 || cmd.indexOf("help") !== -1) {
@@ -556,7 +819,6 @@
       svInput.value = "";
     }
 
-    // Events Supervisor
     if (svToggleBtn) {
       svToggleBtn.addEventListener("click", function () {
         toggleSvPanel();
@@ -617,8 +879,12 @@
       });
     }
 
-    // Am Ende einmal initial rendern
+    // Initial-Rendering
     renderWorkflows();
     renderLogs();
+    renderWorkers();
+
+    // B1: Worker-Tick (alle 1 Sekunde)
+    setInterval(workerTick, 1000);
   });
 })();
