@@ -1,5 +1,5 @@
 // ============================================================================
-// HumanCore.ai – Frontend-Logik (UI-only Demo)
+// HumanCore.ai – Frontend-Logik (stabile Demo-Version)
 // ============================================================================
 
 (function () {
@@ -27,8 +27,85 @@
     };
 
     hcLogs.push(entry);
-    if (typeof window.renderLogs === "function") {
-      window.renderLogs(hcLogs);
+
+    // Für evtl. spätere Nutzung im globalen Scope
+    window.hcLogs = hcLogs.slice();
+
+    renderLogs();
+  }
+
+  function renderLogs() {
+    // Variante 1: Tabellen-Ansicht (neue UI)
+    var tbody = document.getElementById("logs-table-body");
+    var wrapper = document.getElementById("logs-table-wrapper");
+    var empty = document.getElementById("logs-empty");
+
+    // Variante 2: einfache Liste (ältere Struktur)
+    var listDiv = document.getElementById("log-list");
+
+    var list = hcLogs.slice().sort(function (a, b) {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
+    // Tabellenvariante, falls vorhanden
+    if (tbody) {
+      tbody.innerHTML = "";
+      if (list.length === 0) {
+        if (empty) empty.style.display = "block";
+        if (wrapper) wrapper.style.display = "none";
+      } else {
+        if (empty) empty.style.display = "none";
+        if (wrapper) wrapper.style.display = "block";
+
+        list.forEach(function (log) {
+          var tr = document.createElement("tr");
+
+          var tdTime = document.createElement("td");
+          var t = log.createdAt ? new Date(log.createdAt) : null;
+          tdTime.textContent = t && !isNaN(t) ? t.toLocaleTimeString() : "–";
+          tr.appendChild(tdTime);
+
+          var tdSource = document.createElement("td");
+          tdSource.textContent = log.source || "System";
+          tr.appendChild(tdSource);
+
+          var tdType = document.createElement("td");
+          tdType.textContent = log.type || "info";
+          tr.appendChild(tdType);
+
+          var tdMsg = document.createElement("td");
+          tdMsg.textContent = log.message || "";
+          tr.appendChild(tdMsg);
+
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    // Einfacher Fallback (z.B. <div id="log-list">…</div>)
+    if (listDiv) {
+      if (list.length === 0) {
+        listDiv.innerHTML = "<p>Keine Logs vorhanden.</p>";
+      } else {
+        var html = "<ul>";
+        list.forEach(function (log) {
+          var t2 = log.createdAt ? new Date(log.createdAt) : null;
+          var timeStr =
+            t2 && !isNaN(t2) ? t2.toLocaleTimeString() : "–";
+          html +=
+            "<li><strong>" +
+            timeStr +
+            " [" +
+            (log.source || "System") +
+            " / " +
+            (log.type || "info") +
+            "]</strong>: " +
+            (log.message || "") +
+            "</li>";
+        });
+        html += "</ul>";
+        listDiv.innerHTML = html;
+      }
     }
   }
 
@@ -40,11 +117,15 @@
     if (!extra) extra = {};
 
     var wf = {
-      id: "wf-" + Date.now() + "-" + Math.floor(Math.random() * 9999),
+      id:
+        "wf-" +
+        Date.now() +
+        "-" +
+        Math.floor(Math.random() * 9999),
       name: name || "Unbenannter Workflow",
       type: type || "generic",
-      zone: zone || "yellow",
-      status: "planned",
+      zone: (zone || "yellow").toLowerCase(), // red / yellow / green
+      status: "planned", // planned / running / waiting / done
       origin: origin || "SV",
       meta: extra,
       createdAt: new Date().toISOString(),
@@ -52,62 +133,61 @@
     };
 
     hcWorkflows.push(wf);
-    if (typeof window.renderWorkflows === "function") {
-      window.renderWorkflows(hcWorkflows);
-    }
+    window.hcWorkflows = hcWorkflows.slice();
 
     addLog("Supervisor", "workflow", "Workflow angelegt: " + wf.name, {
       workflowId: wf.id,
       zone: wf.zone
     });
 
+    renderWorkflows();
     return wf;
   }
 
-  // ===========================
-  // Workflow-Rendering
-  // ===========================
-
-  window.renderWorkflows = function (workflows) {
+  function renderWorkflows() {
     var tbody = document.getElementById("workflow-table-body");
     var empty = document.getElementById("workflow-empty");
     var wrapper = document.getElementById("workflow-table-wrapper");
     var badge = document.getElementById("workflow-count-badge");
-    var wfCounter = document.getElementById("wf-counter");
+    var counter = document.getElementById("wf-counter");
 
-    if (!tbody) return;
+    if (!tbody) {
+      // UI für Workflows nicht vorhanden -> nichts tun
+      return;
+    }
 
     tbody.innerHTML = "";
 
-    var list = Array.isArray(workflows) ? workflows.slice() : [];
+    var list = hcWorkflows
+      .slice()
+      .sort(function (a, b) {
+        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      });
 
     if (list.length === 0) {
       if (empty) empty.style.display = "block";
       if (wrapper) wrapper.style.display = "none";
       if (badge) badge.textContent = "0 Workflows";
-      if (wfCounter) wfCounter.textContent = "Keine Workflows gestartet";
+      if (counter) counter.textContent = "Keine Workflows gestartet";
       return;
     }
-
-    list.sort(function (a, b) {
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    });
 
     list.forEach(function (wf) {
       var tr = document.createElement("tr");
 
+      // Name
       var tdName = document.createElement("td");
       tdName.textContent = wf.name || "Unbenannter Workflow";
       tr.appendChild(tdName);
 
+      // Zone
       var tdZone = document.createElement("td");
       var zoneSpan = document.createElement("span");
       zoneSpan.classList.add("zone-pill");
-      var zone = (wf.zone || "yellow").toLowerCase();
-      if (zone === "red") {
+      if (wf.zone === "red") {
         zoneSpan.classList.add("zone-red");
         zoneSpan.textContent = "Rot";
-      } else if (zone === "green") {
+      } else if (wf.zone === "green") {
         zoneSpan.classList.add("zone-green");
         zoneSpan.textContent = "Grün";
       } else {
@@ -117,6 +197,7 @@
       tdZone.appendChild(zoneSpan);
       tr.appendChild(tdZone);
 
+      // Status
       var tdStatus = document.createElement("td");
       var statusSpan = document.createElement("span");
       statusSpan.classList.add("status-pill");
@@ -133,17 +214,20 @@
       tdStatus.appendChild(statusSpan);
       tr.appendChild(tdStatus);
 
+      // Datum
       var tdDate = document.createElement("td");
       var created = wf.createdAt ? new Date(wf.createdAt) : null;
-      tdDate.textContent =
-        created && !isNaN(created)
-          ? created.toLocaleString(undefined, {
-              dateStyle: "short",
-              timeStyle: "short"
-            })
-          : "–";
+      if (created && !isNaN(created)) {
+        tdDate.textContent = created.toLocaleString(undefined, {
+          dateStyle: "short",
+          timeStyle: "short"
+        });
+      } else {
+        tdDate.textContent = "–";
+      }
       tr.appendChild(tdDate);
 
+      // Quelle
       var tdOrigin = document.createElement("td");
       tdOrigin.textContent = wf.origin || "SV";
       tr.appendChild(tdOrigin);
@@ -157,82 +241,29 @@
       var count = list.length;
       badge.textContent = count === 1 ? "1 Workflow" : count + " Workflows";
     }
-    if (wfCounter) {
-      var c = list.length;
-      wfCounter.textContent =
-        c === 0
-          ? "Keine Workflows gestartet"
-          : c === 1
-          ? "1 Workflow aktiv/geplant"
-          : c + " Workflows aktiv/geplant";
+    if (counter) {
+      counter.textContent =
+        list.length === 1
+          ? "1 Workflow aktiv / geplant"
+          : list.length + " Workflows aktiv / geplant";
     }
-  };
+  }
 
   // ===========================
-  // Logs-Rendering
-  // ===========================
-
-  window.renderLogs = function (logs) {
-    var tbody = document.getElementById("logs-table-body");
-    var empty = document.getElementById("logs-empty");
-    var wrapper = document.getElementById("logs-table-wrapper");
-
-    if (!tbody) return;
-
-    tbody.innerHTML = "";
-
-    var list = Array.isArray(logs) ? logs.slice() : [];
-
-    if (list.length === 0) {
-      if (empty) empty.style.display = "block";
-      if (wrapper) wrapper.style.display = "none";
-      return;
-    }
-
-    list.sort(function (a, b) {
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    });
-
-    list.forEach(function (log) {
-      var tr = document.createElement("tr");
-
-      var tdTime = document.createElement("td");
-      var t = log.createdAt ? new Date(log.createdAt) : null;
-      tdTime.textContent =
-        t && !isNaN(t) ? t.toLocaleTimeString(undefined, { timeStyle: "short" }) : "–";
-      tr.appendChild(tdTime);
-
-      var tdSource = document.createElement("td");
-      tdSource.textContent = log.source || "System";
-      tr.appendChild(tdSource);
-
-      var tdType = document.createElement("td");
-      tdType.textContent = log.type || "info";
-      tr.appendChild(tdType);
-
-      var tdMsg = document.createElement("td");
-      tdMsg.textContent = log.message || "";
-      tr.appendChild(tdMsg);
-
-      tbody.appendChild(tr);
-    });
-
-    if (empty) empty.style.display = "none";
-    if (wrapper) wrapper.style.display = "block";
-  };
-
-  // ===========================
-  // DOM-Setup
+  // DOM-Setup nach Laden
   // ===========================
 
   document.addEventListener("DOMContentLoaded", function () {
-    // ---------- Tabs / Navigation ----------
+    // ---------------------------
+    // Navigation (Tabs)
+    // ---------------------------
     var navButtons = document.querySelectorAll(".nav-btn");
     var sections = document.querySelectorAll(".page-section");
 
-    function activateSection(id) {
+    function showSection(targetId) {
       sections.forEach(function (sec) {
-        if (sec.id === id) {
+        if (!sec.id) return;
+        if (sec.id === targetId) {
           sec.classList.add("active");
         } else {
           sec.classList.remove("active");
@@ -240,8 +271,8 @@
       });
 
       navButtons.forEach(function (btn) {
-        var target = btn.getAttribute("data-target");
-        if (target === id) {
+        var t = btn.getAttribute("data-target");
+        if (t === targetId) {
           btn.classList.add("active");
         } else {
           btn.classList.remove("active");
@@ -251,14 +282,19 @@
 
     navButtons.forEach(function (btn) {
       btn.addEventListener("click", function () {
-        var target = btn.getAttribute("data-target");
-        if (target) activateSection(target);
+        var targetId = btn.getAttribute("data-target");
+        if (targetId) {
+          showSection(targetId);
+        }
       });
     });
 
-    activateSection("dashboard");
+    // Default: Dashboard anzeigen
+    showSection("dashboard");
 
-    // ---------- Wizard ----------
+    // ---------------------------
+    // Wizard
+    // ---------------------------
     var wizName = document.getElementById("wiz-name");
     var wizAutonomy = document.getElementById("wiz-autonomy");
     var wizCritical = document.getElementById("wiz-critical");
@@ -266,24 +302,27 @@
     var wizOutput = document.getElementById("wiz-output");
     var configBox = document.getElementById("config-box");
 
-    if (wizGenerate && wizOutput && configBox) {
+    if (wizGenerate) {
       wizGenerate.addEventListener("click", function () {
-        var profileName = (wizName && wizName.value.trim()) || "Standard-Profil";
+        var profileName = (wizName && wizName.value.trim()) || "Standard";
         var autonomy = wizAutonomy ? wizAutonomy.value : "0";
         var critical = wizCritical ? wizCritical.value === "true" : true;
 
-        var cfg = {
+        var config = {
           profileName: profileName,
-          autonomyLevel: Number(autonomy),
-          confirmCriticalActions: critical,
-          createdAt: new Date().toISOString(),
-          notes:
-            "Demo-Konfiguration. Keine echten Schreibrechte, nur Entwurfs-/Simulationslogik."
+          autonomyLevel: autonomy,
+          requireConfirmationForCritical: critical,
+          generatedAt: new Date().toISOString()
         };
 
-        var json = JSON.stringify(cfg, null, 2);
-        wizOutput.textContent = json;
-        configBox.textContent = json;
+        var json = JSON.stringify(config, null, 2);
+
+        if (wizOutput) {
+          wizOutput.textContent = json;
+        }
+        if (configBox) {
+          configBox.textContent = json;
+        }
 
         addLog("Wizard", "config", "Neue Demo-Konfiguration erzeugt.", {
           profileName: profileName,
@@ -292,7 +331,10 @@
       });
     }
 
-    // ---------- Supervisor Chat ----------
+    // ---------------------------
+    // Supervisor Chat & Popup
+    // ---------------------------
+
     var svToggleBtn = document.getElementById("sv-toggle-btn");
     var svPanel = document.getElementById("sv-chat-panel");
     var svCloseBtn = document.getElementById("sv-close-btn");
@@ -302,7 +344,6 @@
     var svInput = document.getElementById("sv-input");
     var svSendBtn = document.getElementById("sv-send-btn");
     var svFileInput = document.getElementById("sv-file-input");
-    var svFileBtn = document.getElementById("sv-file-btn");
 
     var svPopup = document.getElementById("sv-popup");
     var svPopupContent = document.getElementById("sv-popup-content");
@@ -319,8 +360,10 @@
       var shouldOpen = forceOpen ? true : isHidden;
       if (shouldOpen) {
         svPanel.classList.remove("hidden");
+        svToggleBtn.classList.add("sv-open");
       } else {
         svPanel.classList.add("hidden");
+        svToggleBtn.classList.remove("sv-open");
       }
     }
 
@@ -340,14 +383,15 @@
         osc.start();
         osc.stop(ctx.currentTime + 0.12);
       } catch (e) {
-        // ignorieren
+        // Ignorieren – Sound ist nur Bonus.
       }
     }
 
     function renderSvMessages() {
       if (!svBody) return;
       svBody.innerHTML = "";
-      svMessages.forEach(function (msg) {
+      for (var i = 0; i < svMessages.length; i++) {
+        var msg = svMessages[i];
         var div = document.createElement("div");
         div.classList.add("sv-msg");
         if (msg.from === "user") {
@@ -364,20 +408,20 @@
         }
         div.textContent = msg.text;
         svBody.appendChild(div);
-      });
+      }
       svBody.scrollTop = svBody.scrollHeight;
     }
 
     function svShowPopup(severity, text) {
       if (!svPopup || !svPopupContent || !svPopupText) return;
       svPopupText.textContent = text;
-      svPopupContent.className = "sv-popup-content";
+      svPopupContent.classList.remove("success", "ask", "alarm");
       if (severity === "success") {
-        // optional: extra Styling
+        svPopupContent.classList.add("success");
       } else if (severity === "ask") {
-        // optional
+        svPopupContent.classList.add("ask");
       } else if (severity === "alarm") {
-        // optional
+        svPopupContent.classList.add("alarm");
       }
       svPopup.classList.remove("hidden");
 
@@ -406,7 +450,7 @@
         timestamp: new Date().toISOString()
       });
       renderSvMessages();
-      addLog(source, logType, text, options.context || {});
+      addLog(source, logType, text);
       if (popup) svShowPopup(severity, text);
     }
 
@@ -449,7 +493,10 @@
             "“ wurde angelegt (Zone: gelb).",
           { popup: true, logType: "decision" }
         );
-      } else if (cmd.indexOf("workflow") !== -1 || cmd.indexOf("bericht") !== -1) {
+      } else if (
+        cmd.indexOf("workflow") !== -1 ||
+        cmd.indexOf("bericht") !== -1
+      ) {
         var nameMatch = raw.match(/["“](.+?)["”]/);
         var wfName2 = nameMatch ? nameMatch[1] : "Allgemeiner Workflow";
         addWorkflow(wfName2, "generic", "yellow", "SV (Chat)");
@@ -460,13 +507,19 @@
             "“ als Entwurf angelegt (Zone: gelb). Bitte prüfen, bevor etwas extern verwendet wird.",
           { popup: true, logType: "decision" }
         );
-      } else if (cmd.indexOf("behörde") !== -1 || cmd.indexOf("finanz") !== -1) {
+      } else if (
+        cmd.indexOf("behörde") !== -1 ||
+        cmd.indexOf("finanz") !== -1
+      ) {
         svNotify(
           "alarm",
           "Kritische Aktion erkannt (Behörde/Finanzen). HumanCore 1.0 arbeitet nur im Entwurfsmodus – keine direkte Außenkommunikation.",
           { popup: true, logType: "warning" }
         );
-      } else if (cmd.indexOf("auslastung") !== -1 || cmd.indexOf("last") !== -1) {
+      } else if (
+        cmd.indexOf("auslastung") !== -1 ||
+        cmd.indexOf("last") !== -1
+      ) {
         var load = 35 + Math.floor(Math.random() * 25);
         svNotify(
           "success",
@@ -481,7 +534,10 @@
           "Du kannst z.B. sagen: „Starte Workflow „Kundenbericht““, „Wie ist die aktuelle Auslastung?“, oder eine Datei anhängen, die als Entwurf-Workflow übernommen wird.",
           { popup: false, logType: "info" }
         );
-      } else if (cmd.indexOf("reset") !== -1 || cmd.indexOf("zurücksetzen") !== -1) {
+      } else if (
+        cmd.indexOf("reset") !== -1 ||
+        cmd.indexOf("zurücksetzen") !== -1
+      ) {
         svMessages = [];
         renderSvMessages();
         svNotify(
@@ -533,12 +589,6 @@
       });
     }
 
-    if (svFileBtn && svFileInput) {
-      svFileBtn.addEventListener("click", function () {
-        svFileInput.click();
-      });
-    }
-
     if (svFileInput) {
       svFileInput.addEventListener("change", function (e) {
         var file = e.target.files[0];
@@ -567,8 +617,8 @@
       });
     }
 
-    // Initiales Rendern
-    window.renderWorkflows(hcWorkflows);
-    window.renderLogs(hcLogs);
+    // Am Ende einmal initial rendern
+    renderWorkflows();
+    renderLogs();
   });
 })();
